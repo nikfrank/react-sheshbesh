@@ -441,7 +441,88 @@ we'll collect single and double click events (we'll use the double clicks to mov
 //...
 ```
 
-now we can start thinking through the logic of the game
+### jail and home
+
+once we get our game running, we'll end up with pieces in jail or home. Let's render them now so we're ready for that later.
+
+<sub>./src/App.js</sub>
+```js
+  state = {
+    chips: [...initBoard],
+    whiteHome: 15,
+    whiteJail: 5,
+    blackHome: 15,
+    blackJail: 5,
+  }
+```
+
+these are the maximum values for home or jail we need to account for
+
+(of course it's possible to have more than 5 in jail, if you've taught your younger brother all the rules wrong and he keeps leaving all of his pieces vulnerable!)
+
+remember in the last step we already passed `this.state.whiteHome`, `this.state.whiteJail`, `this.state.blackHome`, `this.state.blackJail` as `props` to our `Board` Component
+
+
+<sub>./src/Board.js</sub>
+```js
+//...
+
+    {
+      [...Array(whiteJail)].map((_, i)=>(
+        <circle key={i} cx={710}
+                cy={ 60 + 60*i } r={30}
+                className='white-chip'/>
+      ))
+    }
+    {
+      [...Array(blackJail)].map((_, i)=>(
+        <circle key={i} cx={710}
+                cy={ 940 - 60*i } r={30}
+                className='black-chip'/>
+      ))
+    }
+
+```
+
+this will render the jailed pieces in the middle of the board on either side
+
+
+```js
+    {
+      [...Array(whiteHome)].map((_, i)=> (
+        <rect key={i} x={1420} y={25 + 25*i} height={20} width={60} className='white-home' />
+      ))
+    }
+    {
+      [...Array(blackHome)].map((_, i)=> (
+        <rect key={i} x={1420} y={955 - 25*i} height={20} width={60} className='black-home' />
+      ))
+    }
+
+//...
+```
+
+as for home, we've rendered the pieces on their sides (as rectangles... the precocious student may wish to style them with a linear gradient to appear more like the edge of a circular piece...)
+
+
+we'll need some CSS for those home pieces...
+
+
+<sub>./src/App.css
+```css
+rect.white-home {
+  fill: #0aa;
+}
+
+rect.black-home {
+  fill: brown;
+}
+```
+
+
+
+now that we have all the pieces rendering we can start thinking through the logic of the game
+
 
 
 ### taking turns

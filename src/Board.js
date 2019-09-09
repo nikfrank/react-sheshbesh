@@ -79,13 +79,6 @@ const Board = ({
       ))
     }
 
-  </svg>
-);
-
-export default Board;
-
-/*
-
     {
       [...Array(whiteJail)].map((_, i)=>(
         <circle key={i} cx={710}
