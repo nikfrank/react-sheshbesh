@@ -996,6 +996,33 @@ now all we have to do is return all the legal moves
 //... (just close curlies)
 ```
 
+it is at this time I found it convenient to move the `initBoard` const into the util file
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+import { initBoard, calculateLegalMoves } from './util';
+
+//... remove the previous declaration of initBoard
+```
+
+
+<sub>./src/util.js</sub>
+```js
+export const initBoard = [
+  2, 0, 0, 0, 0, -5,
+  0, -3, 0, 0, 0, 5,
+  -5, 0, 0, 0, 3, 0,
+  5, 0, 0, 0, 0, -2,
+];
+
+//...
+```
+
+
+
 #### testing our legal moves function
 
 let's write some test cases so we can be confident in our outcome
@@ -1012,8 +1039,131 @@ we'll want to test:
 
 <sub>./src/util.test.js</sub>
 ```js
+it('moves out of jail', ()=>{
+  const moves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [2, 6],
+    turn: 'white',
+    whiteJail: 1,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 1 );
+  expect( moves[0] ).toEqual({ moveFrom: 'whiteJail', moveTo: 22, usedDie: 2 });
+});
+```
+
+now if we can't get out
+
+```js
+//...
+
+it('no moves out of jail', ()=>{
+  const moves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [6, 6],
+    turn: 'white',
+    whiteJail: 1,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 0 );
+});
+```
+
+now for a normal move
+
+```js
+//...
+
+it('moves around the board', ()=>{
+  const moves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [5, 2],
+    turn: 'white',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 6 );
+
+  
+  const moreMoves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [6, 2],
+    turn: 'white',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moreMoves ).toHaveLength( 7 );
+});
+```
+
+here I've tested two cases just to make sure the "blocking" is working
+
+
+now we should test that captures are legal moves
+
+```js
+//...
+
+it('captures', ()=>{
+
+  const captureBoard = [
+    2, 2, -1, -1, -2, -2,
+    0, 0, 0, 0, 0, -9,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 11,
+  ];
+  
+  const moves = calculateLegalMoves({
+    chips: captureBoard,
+    dice: [2, 3],
+    turn: 'black',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 3 );
+});
 
 ```
+
+
+
+and for moving home, we'll need another arrangement of pieces
+
+```js
+//...
+
+it('moves home', ()=>{
+
+  const moveHomeBoard = [
+    -15, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 5, 5, 5,
+  ];
+  
+  const moves = calculateLegalMoves({
+    chips: moveHomeBoard,
+    dice: [6, 2],
+    turn: 'black',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 3 );
+});
+
+```
+
+
+while that doesn't test every possible case, it is fairly exhaustive and should therefore make us feel more confident in our solution.
+
+
+
 
 
 #### calculate board after move

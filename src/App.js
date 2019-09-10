@@ -4,14 +4,8 @@ import './App.css';
 import Board from './Board';
 import Dice from './Dice';
 
-import { calculateLegalMoves } from './util';
+import { initBoard, calculateLegalMoves } from './util';
 
-const initBoard = [
-  2, 0, 0, 0, 0, -5,
-  0, -3, 0, 0, 0, 5,
-  -5, 0, 0, 0, 3, 0,
-  5, 0, 0, 0, 0, -2,
-];
 
 class App extends React.Component {
 
