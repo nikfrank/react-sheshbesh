@@ -6,7 +6,6 @@ export const initBoard = [
 ];
 
 
-
 export const calculateBoardAfterMove = (
   { chips, dice, turn, blackJail, whiteJail, blackHome, whiteHome },
   { moveFrom, moveTo, usedDie },

@@ -1535,11 +1535,113 @@ it('moves pieces home', ()=>{
 
 ### ending the turn (blockades)
 
+as we mentioned before, every time the array of legal moves changes (dice are rolled, a piece is moved), we will want to calculate a new array of legal moves
+
+if that array is empty, the turn is over.
+
+by storing the `legalMoves` in `state`, we could also (as homework!) highlight the chips which the player could move to / from
 
 
+we will implement this by using [react setState callback](https://stackoverflow.com/questions/42038590/when-to-use-react-setstate-callback)
+
+
+in our `roll` function and our `makeMove` function, we'll call a new function `updateLegalMoves` which will update the legal moves in `state`
+
+that `setState` call will also have a callback to call another new function (we bill by the function) `checkTurnOver` which will trigger the `turn` change
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  makeMove = (move)=> {
+    this.setState({
+      ...calculateBoardAfterMove(this.state, move),
+      selectedChip: null
+    }, this.updateLegalMoves);
+  }
+
+  roll = ()=> {
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.updateLegalMoves);
+      
+      else this.updateLegalMoves();
+    })
+  }
+
+  updateLegalMoves = ()=> this.setState({
+    legalMoves: calculateLegalMoves(this.state),
+  }, this.checkTurnOver)
+
+  checkTurnOver = ()=>{
+    if( !this.state.legalMoves.length ) this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    });
+  }
+//...
+```
+
+
+we can also replace in `spaceClicked` our `calculateLegalMoves` call with
+
+```js
+//...
+
+    const { legalMoves } = this.state;
+    
+//...
+```
+
+and we should really initialize `legalMoves` to `[]`
+
+```js
+//...
+
+  state = {
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    turn: 'black',
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  }
+
+//...
+```
+
+and when there are no legal moves, but there are dices remaining, we should show that state for a few seconds so the player is not confused about the turn changing
+
+```js
+//...
+
+  checkTurnOver = ()=>{
+    if( this.state.whiteHome === 15 ) console.log('white wins');
+    if( this.state.blackHome === 15 ) console.log('black wins');
+
+    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    }), 1000* this.state.dice.length);
+  }
+  
+//...
+```
 
 
 ### moving home (double clicks)
+
+
+
+
 
 ### ending the game
 

@@ -19,14 +19,14 @@ class App extends React.Component {
     turn: 'black',
     dice: [],
     selectedChip: null,
+    legalMoves: [],
   }
-
 
   spaceClicked = (clicked)=>{
     // if no dice, do nothing (wait for roll)
     if( !this.state.dice.length ) return;
 
-    const legalMoves = calculateLegalMoves(this.state);
+    const { legalMoves } = this.state;
 
     // if turn is in jail
     if( this.state[ this.state.turn + 'Jail' ] ){
@@ -60,6 +60,7 @@ class App extends React.Component {
   
 
   spaceDoubleClicked = (index)=> {
+    return;
     //// if it's a doubleClick & chip can go home, makeMove(go home)
 
     const legalHomeMoves = calculateLegalMoves(
@@ -97,15 +98,12 @@ class App extends React.Component {
     }
   }
 
-
   makeMove = (move)=> {
     this.setState({
       ...calculateBoardAfterMove(this.state, move),
       selectedChip: null
-    }, this.checkTurnOver);
+    }, this.updateLegalMoves);
   }
-
-  
 
   roll = ()=> {
     if( this.state.dice.length ) return;
@@ -114,23 +112,26 @@ class App extends React.Component {
       if( this.state.dice[0] === this.state.dice[1] )
         this.setState({
           dice: [...this.state.dice, ...this.state.dice],
-        }, this.checkTurnOver);
+        }, this.updateLegalMoves);
       
-      else this.checkTurnOver();
+      else this.updateLegalMoves();
     })
   }
 
 
+  updateLegalMoves = ()=> this.setState({
+    legalMoves: calculateLegalMoves(this.state),
+  }, this.checkTurnOver)
+  
+
   checkTurnOver = ()=>{
     if( this.state.whiteHome === 15 ) console.log('white wins');
     if( this.state.blackHome === 15 ) console.log('black wins');
-    
-    const legalMoves = calculateLegalMoves(this.state);
 
-    if( !legalMoves.length ) this.setState({
+    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
       turn: ({ black: 'white', white: 'black' })[this.state.turn],
       dice: [],
-    });
+    }), 1000* this.state.dice.length);
   }
 
   render() {
