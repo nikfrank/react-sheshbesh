@@ -95,7 +95,7 @@ g.selected-chip-16:nth-of-type(2) polygon:nth-child(5),
 g.selected-chip-18:nth-of-type(2) polygon:nth-child(7),
 g.selected-chip-20:nth-of-type(2) polygon:nth-child(9),
 g.selected-chip-22:nth-of-type(2) polygon:nth-child(11) {
-  fill: #880;
+  fill: #ff0;
 }
 
 g.selected-chip-1:first-of-type polygon:nth-child(2),
@@ -111,5 +111,5 @@ g.selected-chip-17:nth-of-type(2) polygon:nth-child(6),
 g.selected-chip-19:nth-of-type(2) polygon:nth-child(8),
 g.selected-chip-21:nth-of-type(2) polygon:nth-child(10),
 g.selected-chip-23:nth-of-type(2) polygon:nth-child(12) {
-  fill: #ff0;
+  fill: #880;
 }

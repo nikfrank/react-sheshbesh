@@ -1639,12 +1639,80 @@ and when there are no legal moves, but there are dices remaining, we should show
 
 ### moving home (double clicks)
 
+once the player has gotten their pieces in the home stretch (the last 6 chips before their home), double clicking on a piece should move it home (if that is a legal move)
 
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  spaceDoubleClicked = (clicked)=> {
+    const legalHomeMove = this.state.legalMoves.find(move => (
+      (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === clicked)
+    ) );
+    
+    if( legalHomeMove )
+      this.setState({
+        ...calculateBoardAfterMove(this.state, legalHomeMove),
+        selectedChip: null,
+      }, this.updateLegalMoves);
+  }
+  
+//...
+```
 
 
 
 ### ending the game
 
+now that everything works well, we should reset the game if one player wins!
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  resetGame = ()=> this.setState({
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  })
+
+
+//...
+
+  checkTurnOver = ()=>{
+    if( this.state.whiteHome === 15 ){
+      console.log('white wins');
+      return this.resetGame();
+    }
+    
+    if( this.state.blackHome === 15 ){
+      console.log('black wins');
+      return this.resetGame();
+    }
+
+    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    }), 1000* this.state.dice.length);
+  }
+
+//...
+```
+
+
+I've made this reset the game without changing whose turn it is... that way the winner goes first in the next game (the strong survive!)
+
+
+congrats on getting through the 2 player local game
+
+next up - the computer player!
 
 
 <a name="step2"></a>

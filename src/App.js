@@ -22,6 +22,18 @@ class App extends React.Component {
     legalMoves: [],
   }
 
+  resetGame = ()=> this.setState({
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  })
+
   spaceClicked = (clicked)=>{
     // if no dice, do nothing (wait for roll)
     if( !this.state.dice.length ) return;
@@ -59,43 +71,16 @@ class App extends React.Component {
   }
   
 
-  spaceDoubleClicked = (index)=> {
-    return;
-    //// if it's a doubleClick & chip can go home, makeMove(go home)
-
-    const legalHomeMoves = calculateLegalMoves(
-      this.state.chips, this.state.dice, this.state.turn,
-      this.state.whiteJail, this.state.blackJail
-    ).filter(move => (
-      (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === index)
+  spaceDoubleClicked = (clicked)=> {
+    const legalHomeMove = this.state.legalMoves.find(move => (
+      (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === clicked)
     ) );
     
-    if( legalHomeMoves.length ){
-
-      let usedDie = this.state.turn === 'black' ? 24 - index : index + 1;
-
-      if( !~this.state.dice.indexOf(usedDie) )
-        usedDie = this.state.dice.find(die => die > usedDie);
-      
-      
+    if( legalHomeMove )
       this.setState({
+        ...calculateBoardAfterMove(this.state, legalHomeMove),
         selectedChip: null,
-        chips: this.state.chips.map((chip, i)=> (
-          i !== index
-        ) ? chip : (
-          this.state.turn === 'white' ? chip + 1 : chip - 1
-        )),
-        
-        dice: [
-          ...this.state.dice.slice( 0, this.state.dice.indexOf(usedDie) ),
-          ...this.state.dice.slice( this.state.dice.indexOf(usedDie) + 1)
-        ],
-
-        [this.state.turn + 'Home']: this.state[ this.state.turn + 'Home' ] + 1,
-
-      }, this.checkTurnOver);
-      
-    }
+      }, this.updateLegalMoves);
   }
 
   makeMove = (move)=> {
@@ -125,8 +110,15 @@ class App extends React.Component {
   
 
   checkTurnOver = ()=>{
-    if( this.state.whiteHome === 15 ) console.log('white wins');
-    if( this.state.blackHome === 15 ) console.log('black wins');
+    if( this.state.whiteHome === 15 ){
+      console.log('white wins');
+      return this.resetGame();
+    }
+    
+    if( this.state.blackHome === 15 ){
+      console.log('black wins');
+      return this.resetGame();
+    }
 
     if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
       turn: ({ black: 'white', white: 'black' })[this.state.turn],
