@@ -91,3 +91,22 @@ it('moves home', ()=>{
 
   expect( moves ).toHaveLength( 3 );
 });
+
+
+
+
+it('moves pieces out of jail', ()=>{
+  
+});
+
+it('moves pieces around the board', ()=>{
+  
+});
+
+it('captures enemies', ()=>{
+  
+});
+
+it('moves pieces home', ()=>{
+  
+});

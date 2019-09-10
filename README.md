@@ -1164,17 +1164,193 @@ while that doesn't test every possible case, it is fairly exhaustive and should 
 
 
 
+#### moving pieces
+
+now we can return to our `spaceClicked` function, where we will use our `calculateLegalMoves` function to decide to make a move.
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  spaceClicked = (clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !this.state.dice.length ) return;
+
+    const legalMoves = calculateLegalMoves(this.state);
+
+    // if turn is in jail
+    if( this.state[ this.state.turn + 'Jail' ] ){
+      const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
+        (moveFrom === this.state.turn + 'Jail') &&
+        (moveTo === clicked)
+      ));
+      
+      if( clickMove ) this.makeMove(clickMove);
+
+```
+
+that will take care of jail moves
+
+we haven't written the `makeMove` function yet, but we will next, and it will take a move object as previously specified as input
+
+```js
+//...
+
+    } else {
+      // if no chip selected
+      if( this.state.selectedChip === null ){
+        if( legalMoves.filter(({ moveFrom }) => moveFrom === clicked ).length )
+          this.setState({ selectedChip: clicked });
+```
+
+now only chips with legal moves may be selected
+
+
+```js
+      } else {
+        const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
+          (moveFrom === this.state.selectedChip) &&
+          (moveTo === clicked)
+        ));
+        
+        if( clickMove ) this.makeMove(clickMove);
+
+        // if another click on the selectedChip, unselect the chip
+        if( index === this.state.selectedChip )
+          this.setState({ selectedChip: null });
+      }
+    }
+  }
+
+```
+
+and finally, when a click is made after already selecting a chip to move from, we check if there's a legal move and call `makeMove`
+
+
+most of the logic for making a move will be in calculating the next board after the move
+
+so we'll code the `makeMove` function in the next section
+
 
 
 #### calculate board after move
 
-#### moving pieces
+<sub>./src/util.js</sub>
+```js
+//...
 
-#### captures
+export const calculateBoardAfterMove = (
+  { chips, dice, turn, blackJail, whiteJail },
+  { moveFrom, moveTo, usedDie },
+)=>{
+
+  //...
+
+}
+```
+
+here we've already decided that the move is legal, our only goal is to calculate what the next state of the game should be
+
+
+```
+decrease the pieces on the from space (or jail)
+
+increase the pieces on the to space (or home)
+
+if the to space is a capture, increase the jail of the opponent
+```
+
+<sub>./src/util.js</sub>
+```js
+//...
+
+export const calculateBoardAfterMove = (
+  { chips, dice, turn, blackJail, whiteJail, blackHome, whiteHome },
+  { moveFrom, moveTo, usedDie },
+)=>{
+
+  const direction = turn === 'black' ? 1 : -1;
+
+  let nextDice = [
+    ...dice.slice( 0, dice.indexOf(usedDie) ),
+    ...dice.slice( dice.indexOf(usedDie) + 1)
+  ];
+
+  let nextChips = [...chips];
+  let nextWhiteJail = whiteJail;
+  let nextBlackJail = blackJail;
+  let nextWhiteHome = whiteHome;
+  let nextBlackHome = blackHome;
+
+  if( typeof moveFrom === 'number' ) nextChips[ moveFrom ] -= direction;
+  else {
+    if( turn === 'black' ) nextBlackJail--;
+    if( turn === 'white' ) nextWhiteJail--;
+  }
+
+  if( typeof moveTo === 'number' ){
+    // if the to is a single opponent, move it to jail
+    if( chips[moveTo] === -direction ){
+      nextChips[moveTo] = direction;
+      if( turn === 'black' ) nextWhiteJail++;
+      if( turn === 'white' ) nextBlackJail++;
+
+    } else {
+      // increase a chip in the to
+      nextChips[moveTo] += direction;
+    }
+  } else {
+    // we're moving home
+    if( turn === 'black' ) nextBlackHome++;
+    if( turn === 'white' ) nextWhiteHome++;
+  }
+
+  return {
+    dice: nextDice,
+    chips: nextChips,
+    turn,
+    whiteJail: nextWhiteJail,
+    whiteHome: nextWhiteHome,
+    blackJail: nextBlackJail,
+    blackHome: nextBlackHome,
+  };
+};
+```
+
+again here we're using `direction` as a convenient way to calculate things for either player
+
+
+now we can call this function in our `makeMove`
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  makeMove = (move)=> {
+    this.setState({
+      ...calculateBoardAfterMove(this.state, move),
+      selectedChip: null
+    });
+  }
+
+//...
+```
+
+ending the turn we'll need to deal with later
+
+
+
+#### testing board after move (jail, captures, normal moves, home)
+
+
+
+
 
 ### ending the turn (blockades)
 
-### moving home
+### moving home (double clicks)
 
 ### ending the game
 

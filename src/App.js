@@ -26,18 +26,30 @@ class App extends React.Component {
     // if no dice, do nothing (wait for roll)
     if( !this.state.dice.length ) return;
 
+    const legalMoves = calculateLegalMoves(this.state);
+
     // if turn is in jail
     if( this.state[ this.state.turn + 'Jail' ] ){
-      // if click is on valid move, this.makeMove(index) (return)
+      const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
+        (moveFrom === this.state.turn + 'Jail') &&
+        (moveTo === clicked)
+      ));
+      
+      if( clickMove ) this.makeMove(clickMove);
       
     } else {
       // if no chip selected
       if( this.state.selectedChip === null ){
-        // if click is on turn's chips with legal moves, select that chip (return)
+        if( legalMoves.filter(({ moveFrom }) => moveFrom === clicked ).length )
+          this.setState({ selectedChip: clicked });
         
       } else {
-        // else this is a second click
-        // if the space selected is a valid move, this.makeMove(index)
+        const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
+          (moveFrom === this.state.selectedChip) &&
+          (moveTo === clicked)
+        ));
+        
+        if( clickMove ) this.makeMove(clickMove);
 
         // if another click on the selectedChip, unselect the chip
         if( index === this.state.selectedChip )
@@ -46,55 +58,6 @@ class App extends React.Component {
     }
   }
   
-  spaceClicked2 = (index)=> {
-    const direction = this.state.turn === 'black' ? 1 : -1;
-
-    // if no dice, do nothing (wait for roll)
-    if( !this.state.dice.length ) return;
-
-    // if turn is in jail
-    if( this.state[ this.state.turn + 'Jail' ] ){
-      //// if click is on valid move, this.makeMove(index) (return)
-      if( (this.state.turn === 'black') && (index > 5) ) return;
-      if( (this.state.turn === 'white') && (index < 18) ) return;
-      if( (this.state.turn === 'black') && !this.state.dice.includes(index+1) ) return;
-      if( (this.state.turn === 'white') && !this.state.dice.includes(24-index) ) return;
-
-      if( (this.state.chips[index] * direction >= 0) ||
-          (Math.abs(this.state.chips[index]) === 1) ){
-
-        this.makeMove(index);
-      }
-
-      return;
-    }
-
-    // (implicit else)
-
-    // if no chip selected
-    if( this.state.selectedChip === null ){
-      //// if click is on turn's chips, select that chip (return)
-      if( ((this.state.chips[index] > 0) && (this.state.turn === 'black')) ||
-          ((this.state.chips[index] < 0) && (this.state.turn === 'white')) ){
-        this.setState({ selectedChip: index });
-      }
-
-    } else {
-      // else this is a second click
-      //// if the space selected is a valid move, this.makeMove(index)
-      if( this.state.dice.includes(direction * (index - this.state.selectedChip)) ){
-        if( (this.state.chips[index] * direction >= 0) ||
-            Math.abs(this.state.chips[index]) === 1 ){
-          this.makeMove(index);
-        }
-      }
-
-      //// if another click on the selectedChip, unselect the chip
-      if( index === this.state.selectedChip ){
-        this.setState({ selectedChip: null });
-      }
-    }
-  }
 
   spaceDoubleClicked = (index)=> {
     //// if it's a doubleClick & chip can go home, makeMove(go home)
@@ -134,54 +97,15 @@ class App extends React.Component {
     }
   }
 
-  
-  makeMove = (to)=> {
-    const direction = this.state.turn === 'black' ? 1 : -1;
 
-    // using this.state.selectedChip / jail as from
-
-    // remove used die from dice
-    const usedDie = (this.state.selectedChip !== null) ?
-                    direction * (to - this.state.selectedChip) :
-                    this.state.turn === 'white' ? 24 - to : to + 1;
-
-    let nextDice = [
-      ...this.state.dice.slice( 0, this.state.dice.indexOf(usedDie) ),
-      ...this.state.dice.slice( this.state.dice.indexOf(usedDie) + 1)
-    ];
-
-    let nextChips = [...this.state.chips];
-    let nextWhiteJail = this.state.whiteJail;
-    let nextBlackJail = this.state.blackJail;
-
-    // reduce a chip from the from
-    if( this.state.selectedChip !== null) nextChips[ this.state.selectedChip ] -= direction;
-    else {
-      if( this.state.turn === 'black' ) nextBlackJail--;
-      if( this.state.turn === 'white' ) nextWhiteJail--;
-    }
-
-    // if the to is a single opponent, move it to jail
-    if( this.state.chips[to] === -direction ){
-      nextChips[to] = direction;
-      if( this.state.turn === 'black' ) nextWhiteJail++;
-      if( this.state.turn === 'white' ) nextBlackJail++;
-
-    } else {
-      // increase a chip in the to
-      nextChips[to] += direction;
-    }
-
-    // if the to is home, move there, check if game is over
-
+  makeMove = (move)=> {
     this.setState({
-      dice: nextDice,
-      chips: nextChips,
-      whiteJail: nextWhiteJail,
-      blackJail: nextBlackJail,
-      selectedChip: null,
+      ...calculateBoardAfterMove(this.state, move),
+      selectedChip: null
     }, this.checkTurnOver);
   }
+
+  
 
   roll = ()=> {
     if( this.state.dice.length ) return;

@@ -5,6 +5,63 @@ export const initBoard = [
   5, 0, 0, 0, 0, -2,
 ];
 
+
+
+export const calculateBoardAfterMove = (
+  { chips, dice, turn, blackJail, whiteJail, blackHome, whiteHome },
+  { moveFrom, moveTo, usedDie },
+)=>{
+
+  const direction = turn === 'black' ? 1 : -1;
+
+  let nextDice = [
+    ...dice.slice( 0, dice.indexOf(usedDie) ),
+    ...dice.slice( dice.indexOf(usedDie) + 1)
+  ];
+
+  let nextChips = [...chips];
+  let nextWhiteJail = whiteJail;
+  let nextBlackJail = blackJail;
+  let nextWhiteHome = whiteHome;
+  let nextBlackHome = blackHome;
+
+  if( typeof moveFrom === 'number' ) nextChips[ moveFrom ] -= direction;
+  else {
+    if( turn === 'black' ) nextBlackJail--;
+    if( turn === 'white' ) nextWhiteJail--;
+  }
+
+  if( typeof moveTo === 'number' ){
+    // if the to is a single opponent, move it to jail
+    if( chips[moveTo] === -direction ){
+      nextChips[moveTo] = direction;
+      if( turn === 'black' ) nextWhiteJail++;
+      if( turn === 'white' ) nextBlackJail++;
+
+    } else {
+      // increase a chip in the to
+      nextChips[moveTo] += direction;
+    }
+  } else {
+    // we're moving home
+    if( turn === 'black' ) nextBlackHome++;
+    if( turn === 'white' ) nextWhiteHome++;
+  }
+
+  return {
+    dice: nextDice,
+    chips: nextChips,
+    turn,
+    whiteJail: nextWhiteJail,
+    whiteHome: nextWhiteHome,
+    blackJail: nextBlackJail,
+    blackHome: nextBlackHome,
+  };
+};
+
+
+
+
 export const calculateLegalMoves = ({ chips, dice, turn, whiteJail, blackJail })=>{
   if( !dice.length ) return [];
 
