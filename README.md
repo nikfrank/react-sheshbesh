@@ -1217,7 +1217,7 @@ now only chips with legal moves may be selected
         if( clickMove ) this.makeMove(clickMove);
 
         // if another click on the selectedChip, unselect the chip
-        if( index === this.state.selectedChip )
+        if( clicked === this.state.selectedChip )
           this.setState({ selectedChip: null });
       }
     }
@@ -1328,6 +1328,10 @@ now we can call this function in our `makeMove`
 ```js
 //...
 
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util';
+
+//...
+
   makeMove = (move)=> {
     this.setState({
       ...calculateBoardAfterMove(this.state, move),
@@ -1344,11 +1348,196 @@ ending the turn we'll need to deal with later
 
 #### testing board after move (jail, captures, normal moves, home)
 
+<sub>./src/util.test.js</sub>
+```js
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util';
+
+//...
+
+```
+
+again in our test, we will contrive some game states and test case moves
+
+then we just need to check that the output is reasonable, so we can be confident in our code
 
 
+```js
+//...
+
+it('moves pieces out of jail', ()=>{
+  const { chips, dice, turn, whiteJail, blackJail, whiteHome, blackHome} =
+    calculateBoardAfterMove({
+      chips: initBoard,
+      dice: [2, 6],
+      turn: 'white',
+      whiteJail: 1,
+      blackJail: 0,
+      whiteHome: 0,
+      blackHome: 0,
+    }, {
+      moveFrom: 'whiteJail',
+      moveTo: 22,
+      usedDie: 2
+    });
+
+  expect( chips[22] ).toEqual( -1 );
+  expect( dice ).toEqual([ 6 ]);
+  expect( turn ).toEqual('white');
+  expect( whiteJail ).toEqual( 0 );
+  expect( blackJail ).toEqual( 0 );
+  expect( whiteHome ).toEqual( 0 );
+  expect( blackHome ).toEqual( 0 );
+});
+
+```
+
+similarly for captures,
+
+```js
+//...
+
+it('captures enemies', ()=>{
+  const captureBoard = [
+    2, 2, -1, -1, -2, -2,
+    0, 0, 0, 0, 0, -9,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 11,
+  ];
+
+  const { chips, dice, turn, whiteJail, blackJail, whiteHome, blackHome} =
+    calculateBoardAfterMove({
+      chips: captureBoard,
+      dice: [2, 3],
+      turn: 'black',
+      whiteJail: 0,
+      blackJail: 0,
+      whiteHome: 0,
+      blackHome: 0,
+    }, {
+      moveFrom: 0,
+      moveTo: 3,
+      usedDie: 3
+    });
+
+  expect( chips[0] ).toEqual( 1 );
+  expect( chips[3] ).toEqual( 1 );
+  expect( dice ).toEqual([ 2 ]);
+  expect( turn ).toEqual('black');
+  expect( whiteJail ).toEqual( 1 );
+  expect( blackJail ).toEqual( 0 );
+  expect( whiteHome ).toEqual( 0 );
+  expect( blackHome ).toEqual( 0 );
+});
+```
+
+normal moves
+
+```js
+//...
+
+it('moves pieces around the board', ()=>{
+  const { chips, dice, turn, whiteJail, blackJail, whiteHome, blackHome} =
+    calculateBoardAfterMove({
+      chips: initBoard,
+      dice: [2, 6],
+      turn: 'white',
+      whiteJail: 0,
+      blackJail: 0,
+      whiteHome: 0,
+      blackHome: 0,
+    }, {
+      moveFrom: 23,
+      moveTo: 17,
+      usedDie: 6
+    });
+
+  expect( chips[23] ).toEqual( -1 );
+  expect( chips[17] ).toEqual( -1 );
+  expect( dice ).toEqual([ 2 ]);
+  expect( turn ).toEqual('white');
+  expect( whiteJail ).toEqual( 0 );
+  expect( blackJail ).toEqual( 0 );
+  expect( whiteHome ).toEqual( 0 );
+  expect( blackHome ).toEqual( 0 );
+});
+```
+
+and home moves... remembering of course to test both possible cases
+
+```js
+//...
+
+it('moves pieces home furthest', ()=>{
+  const moveHomeBoard = [
+    -15, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 5, 5, 5,
+  ];
+
+  const { chips, dice, turn, whiteJail, blackJail, whiteHome, blackHome} =
+    calculateBoardAfterMove({
+      chips: moveHomeBoard,
+      dice: [2, 6],
+      turn: 'black',
+      whiteJail: 0,
+      blackJail: 0,
+      whiteHome: 0,
+      blackHome: 0,
+    }, {
+      moveFrom: 21,
+      moveTo: 'blackHome',
+      usedDie: 6,
+    });
+
+  expect( chips[21] ).toEqual( 4 );
+  expect( dice ).toEqual([ 2 ]);
+  expect( turn ).toEqual('black');
+  expect( whiteJail ).toEqual( 0 );
+  expect( blackJail ).toEqual( 0 );
+  expect( whiteHome ).toEqual( 0 );
+  expect( blackHome ).toEqual( 1 );
+});
+
+it('moves pieces home', ()=>{
+  const moveHomeBoard = [
+    -15, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 5, 5, 5,
+  ];
+
+  const { chips, dice, turn, whiteJail, blackJail, whiteHome, blackHome} =
+    calculateBoardAfterMove({
+      chips: moveHomeBoard,
+      dice: [2, 6],
+      turn: 'black',
+      whiteJail: 0,
+      blackJail: 0,
+      whiteHome: 0,
+      blackHome: 0,
+    }, {
+      moveFrom: 22,
+      moveTo: 'blackHome',
+      usedDie: 2,
+    });
+
+  expect( chips[22] ).toEqual( 4 );
+  expect( dice ).toEqual([ 6 ]);
+  expect( turn ).toEqual('black');
+  expect( whiteJail ).toEqual( 0 );
+  expect( blackJail ).toEqual( 0 );
+  expect( whiteHome ).toEqual( 0 );
+  expect( blackHome ).toEqual( 1 );
+});
+```
 
 
 ### ending the turn (blockades)
+
+
+
+
 
 ### moving home (double clicks)
 

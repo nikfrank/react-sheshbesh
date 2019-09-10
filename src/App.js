@@ -4,7 +4,7 @@ import './App.css';
 import Board from './Board';
 import Dice from './Dice';
 
-import { initBoard, calculateLegalMoves } from './util';
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util';
 
 
 class App extends React.Component {
@@ -52,7 +52,7 @@ class App extends React.Component {
         if( clickMove ) this.makeMove(clickMove);
 
         // if another click on the selectedChip, unselect the chip
-        if( index === this.state.selectedChip )
+        if( clicked === this.state.selectedChip )
           this.setState({ selectedChip: null });
       }
     }
@@ -125,10 +125,7 @@ class App extends React.Component {
     if( this.state.whiteHome === 15 ) console.log('white wins');
     if( this.state.blackHome === 15 ) console.log('black wins');
     
-    const legalMoves = calculateLegalMoves(
-      this.state.chips, this.state.dice, this.state.turn,
-      this.state.whiteJail, this.state.blackJail
-    );
+    const legalMoves = calculateLegalMoves(this.state);
 
     if( !legalMoves.length ) this.setState({
       turn: ({ black: 'white', white: 'black' })[this.state.turn],
