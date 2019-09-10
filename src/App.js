@@ -27,7 +27,32 @@ class App extends React.Component {
     selectedChip: null,
   }
 
-  spaceClicked = (index)=> {
+
+  spaceClicked = (clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !this.state.dice.length ) return;
+
+    // if turn is in jail
+    if( this.state[ this.state.turn + 'Jail' ] ){
+      // if click is on valid move, this.makeMove(index) (return)
+      
+    } else {
+      // if no chip selected
+      if( this.state.selectedChip === null ){
+        // if click is on turn's chips with legal moves, select that chip (return)
+        
+      } else {
+        // else this is a second click
+        // if the space selected is a valid move, this.makeMove(index)
+
+        // if another click on the selectedChip, unselect the chip
+        if( index === this.state.selectedChip )
+          this.setState({ selectedChip: null });
+      }
+    }
+  }
+  
+  spaceClicked2 = (index)=> {
     const direction = this.state.turn === 'black' ? 1 : -1;
 
     // if no dice, do nothing (wait for roll)

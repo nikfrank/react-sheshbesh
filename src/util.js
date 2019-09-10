@@ -1,48 +1,40 @@
-export const calculateLegalMoves = (chips, dice, turn, whiteJail, blackJail)=>{
-
-  const direction = turn === 'black' ? 1 : -1;
-  
+export const calculateLegalMoves = ({ chips, dice, turn, whiteJail, blackJail })=>{
   if( !dice.length ) return [];
-
-  //// if we're in Jail
-  ////// calculate spaces in 0-5 or 23-18
 
   if( (turn === 'white') && (whiteJail > 0) ){
     // check if 23-18 are legal moves by dice
     return dice.filter(die => ( chips[ 24 - die ] <= 1 ))
-               .map(die => ({ moveFrom: 'whiteJail', moveTo: 24 - die }) );
+               .map(die => ({ moveFrom: 'whiteJail', moveTo: 24 - die, usedDie: die }) );
     
   } else if( (turn === 'black') && (blackJail > 0) ){
     // check if 0-5 are legal moves by dice
     return dice.filter(die => ( chips[ die - 1 ] >= -1 ))
-               .map(die => ({ moveFrom: 'blackJail', moveTo: die - 1 }) );
+               .map(die => ({ moveFrom: 'blackJail', moveTo: die - 1, usedDie: die }) );
     
   } else {
-    // if all dice we have, for all the chips we have, check if it's open
+    // for all dice we have, for all the chips we have, check if chip +/- die is legal
 
-    let legalMoves = [];
+    const direction = turn === 'black' ? 1 : -1;
 
-    for(let i = 0; i < chips.length; i++){
-      if( chips[i] * direction > 0 ){
+    const uniqueDice = Array.from(new Set(dice));
+    
+    const legalMoves = chips.reduce((moves, chip, i)=> (
+      ( chip * direction <= 0 ) ? moves : [
+        ...moves,
+        ...uniqueDice.filter(die => (
+          (chips[ i + direction * die ] * direction >= -1)
+        )).map(die => ({ moveFrom: i, moveTo: i + direction * die, usedDie: die })),
+      ]
+    ), []);
 
-        legalMoves = [
-          ...legalMoves,
-          ...dice.filter(die => (
-            (chips[ i + direction * die ] * direction >= -1)
-          )).map(die => ({ moveFrom: i, moveTo: i + direction * die }))
-        ];
-        
-      }
-    }
 
-    let furthestPiece;
+    // if all pieces are in last 6, calculate legal home moves
 
-    if(turn === 'white'){
-      furthestPiece = 24 - chips.reverse().findIndex(chip=> chip * direction > 0);
-      chips.reverse();
-    } else {
-      furthestPiece = 24 - chips.findIndex(chip=> chip * direction > 0);
-    }
+    const furthestPiece = (turn === 'white') ? (
+      24 - [...chips].reverse().findIndex(chip=> chip * direction > 0)
+    ) : (
+      24 - chips.findIndex(chip=> chip * direction > 0)
+    );
 
     const legalHomeMoves = (
       furthestPiece > 6
@@ -50,35 +42,29 @@ export const calculateLegalMoves = (chips, dice, turn, whiteJail, blackJail)=>{
       turn === 'white'
     ) ? [0, 1, 2, 3, 4, 5].filter(spot=> (
       (chips[spot] < 0) && (
-        (dice.filter(die => die === spot+1).length) ||
-        (dice.filter(die => ((die >= furthestPiece) && (spot+1 === furthestPiece))).length)
+        (uniqueDice.filter(die => die === spot+1).length) ||
+        (uniqueDice.filter(die => ((die >= furthestPiece) && (spot+1 === furthestPiece))).length)
       )
-    )).map(spot => ({ moveFrom: spot, moveTo: 'whiteHome' })
-      
+    )).map(spot => ({
+      moveFrom: spot,
+      moveTo: 'whiteHome',
+      usedDie: uniqueDice.find(die => die === spot+1) || Math.max(...uniqueDice),
+    })
+
     ) : [23, 22, 21, 20, 19, 18].filter(spot=> (
       (chips[spot] > 0) && (
-        (dice.filter(die => die === 24-spot).length) ||
-        (dice.filter(die => ((die >= furthestPiece) && (24-spot === furthestPiece))).length)
+        (uniqueDice.filter(die => die === 24-spot).length) ||
+        (uniqueDice.filter(die => ((die >= furthestPiece) && (24-spot === furthestPiece))).length)
       )
-    )).map(spot => ({ moveFrom: spot, moveTo: 'blackHome' }))
+    )).map(spot => ({
+      moveFrom: spot,
+      moveTo: 'blackHome',
+      usedDie: uniqueDice.find(die => die === 24-spot) || Math.max(...uniqueDice),
+    }));
 
-    
     return [
       ...legalMoves,
       ...legalHomeMoves,
     ];
-
-    return chips.reduce((legalMoves, chip, i)=>
-      (chip * direction <= 0) ? legalMoves : [
-        ...legalMoves,
-        ...dice.filter(die => (
-          chips[ i + direction * die ] * direction >= -1
-        )).map(die => ({ moveFrom: i, moveTo: i + direction * die }))
-      ], []);
-    
-    
-    // if all pieces are near home, calculate also moves to home
   }
-
-  
 };
