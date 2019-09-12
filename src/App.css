@@ -2,6 +2,36 @@ body {
   overflow: hidden;
 }
 
+button.menu-toggler {
+  position: fixed;
+  right: 15px;
+  top: calc(33vw - 21px);
+
+  background-color: white;
+  border-radius: 8px;
+  padding: 12px;
+  outline: none;
+  font-weight: 900;
+}
+
+.sidenav {
+  position: fixed;
+  height: 100vh;
+  top: 0;
+  width: 200px;
+  transition: left 1s;
+  background-color: grey;
+}
+
+.sidenav.closed {
+  left: -200px;
+}
+
+.sidenav.open {
+  left: 0;
+}
+
+
 .Board {
   max-height: 100vh;
   max-width: 100vw;
