@@ -4,7 +4,7 @@ import './App.css';
 import Board from './Board';
 import Dice from './Dice';
 
-import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util';
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove, calculateBoardOutcomes, cpScore } from './util';
 
 
 class App extends React.Component {
@@ -20,6 +20,8 @@ class App extends React.Component {
     dice: [],
     selectedChip: null,
     legalMoves: [],
+
+    cp: 'white',
   }
 
   resetGame = ()=> this.setState({
@@ -97,9 +99,11 @@ class App extends React.Component {
     this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
       if( !this.state.turn ) {
         if( this.state.dice[0] === this.state.dice[1] )
-          return setTimeout(this.roll, 2000);
+          return setTimeout(()=> this.setState({ dice: [] }, this.roll), 2000);
 
-        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, this.updateLegalMoves);
+        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, ()=>{
+          this.state.turn === this.state.cp ? this.cpMove() : this.updateLegalMoves()
+        });
       }
 
       if( this.state.dice[0] === this.state.dice[1] )
@@ -115,7 +119,6 @@ class App extends React.Component {
   updateLegalMoves = ()=> this.setState({
     legalMoves: calculateLegalMoves(this.state),
   }, this.checkTurnOver)
-  
 
   checkTurnOver = ()=>{
     if( this.state.whiteHome === 15 ){
@@ -131,9 +134,40 @@ class App extends React.Component {
     if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
       turn: ({ black: 'white', white: 'black' })[this.state.turn],
       dice: [],
-    }), 1000* this.state.dice.length);
+    }, this.triggerCP), 1000* this.state.dice.length);
   }
 
+  triggerCP = ()=> (
+    this.state.turn === this.state.cp ? this.cpRoll() : null)
+
+  cpRoll = ()=>{
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.cpMove);
+      
+      else this.cpMove();
+    });
+  }
+  
+  cpMove = ()=>{
+    const options = calculateBoardOutcomes(this.state);
+
+    if( !options.length ) return this.checkTurnOver();
+
+    const scoredOptions = options.map(option=> ({ score: cpScore(option.board), moves: option.moves }));
+
+    const bestMoves = scoredOptions.sort((a, b)=> (a.score - b.score) * (this.state.cp === 'white' ? 1 : -1 ) )[0].moves;
+
+    for(let i=0; i<(bestMoves.length); i++){
+      setTimeout(()=> this.makeMove( bestMoves[i] ), 800 + 900*i);
+    }
+
+  }
+  
   render() {
     return (
       <div className="App">

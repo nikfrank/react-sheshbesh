@@ -1760,6 +1760,33 @@ then set whose turn it is based on which die is larger
 //...
 ```
 
+<sub>./src/App.js</sub>
+```js
+//...
+
+  roll = ()=> {
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( !this.state.turn ) {
+        if( this.state.dice[0] === this.state.dice[1] )
+          return setTimeout(()=> this.setState({ dice: [] }, this.roll), 2000);
+
+        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, this.updateLegalMoves);
+      }
+
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.updateLegalMoves);
+      
+      else this.updateLegalMoves();
+    })
+  }
+
+//...
+```
+
 
 
 ### ending the game
@@ -2020,16 +2047,483 @@ of course, we'll never have 6 dice available, but the test will still pass, and 
 
 ### triggering the computer's move
 
+now that we have a function making lists of options for the computer to select from, we now need to code a bit to get to use it
 
+in our `App`, when the turn is over and we switch the turn, we'll know if we want to trigger the computer's move
+
+we can make a `cpRoll` function to roll the dice for the cp, then `cpMove`, a pseudocode placeholder
+
+we'll trigger `cpRoll` when the turn changes in `checkTurnOver`, which will in turn trigger `cpMove`
+
+in `cpMove`, we'll do the check to make sure we have legal moves to make
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove, calculateBoardOutcomes } from './util';
+
+//...
+
+  state = {
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    turn: null,
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+
+    cp: 'white',
+  }
+
+//...
+
+  checkTurnOver = ()=>{
+    //... if game over yada yada yada...
+
+    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    }, this.triggerCP), 1000* this.state.dice.length);
+  }
+
+  triggerCP = ()=> (this.state.turn === this.state.cp ? this.cpRoll() : null)
+
+  cpRoll = ()=>{
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.cpMove);
+      
+      else this.cpMove();
+    });
+  }
+  
+  cpMove = ()=>{
+    const options = calculateBoardOutcomes(this.state);
+
+    //... next we'll choose which one to play
+
+    console.log( options, options[0] );
+  }
+
+```
+
+
+and of course we'll want to trigger the computer player if they win the first roll
+
+```js
+//...
+
+  roll = ()=> {
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( !this.state.turn ) {
+        if( this.state.dice[0] === this.state.dice[1] )
+          return setTimeout(()=> this.setState({ dice: [] }, this.roll), 2000);
+
+        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, ()=>{
+          this.state.turn === this.state.cp ? this.cpMove() : this.updateLegalMoves()
+        });
+      }
+
+    //...
+
+  }
+
+//...
+```
 
 
 ### scoring board outcomes to decide which is best
 
 
+from the options we just saw logged out, how we'll pick the best choice is based on the style we want to play the game
+
+
+whatever that is, we'll need to program it, so I'll list some of my priorities when playing the game
+
+
+- having pieces home is good
+- having pieces in jail is baaaaaaaaaaad
+- moving the pieces forward is good (more pips is bad)
+- having pieces alone (vulnerable to capture) is bad
+- having more blocks (to make blockades) is good
+- having pieces in the opponent's home 6 is bad
+
+
+we'll assign a numerical score for each of the features discussed (positive = good for black, negative = good for white)
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove, calculateBoardOutcomes, cpScore } from './util';
+
+//...
+
+
+  cpMove = ()=>{
+    const options = calculateBoardOutcomes(this.state);
+
+    const scoredOptions = options.map(option=> ({ score: cpScore(option.board), moves: option.moves }));
+    
+    console.log(scoredOptions);
+  }
+
+//...
+```
+
+once we have reasonable scores for each of the options, it'll be very straightforward to pick the best one
+
+
+<sub>./src/util.js</sub>
+```js
+//...
+
+export const cpScore = board=> {
+
+  return 0;
+};
+```
+
+#### having pieces home is good
+
+<sub>./src/util.js</sub>
+```js
+export const scoreBoard = (board)=>{
+  const { chips, blackJail, whiteJail } = board;
+
+  const blackHome = 15 - blackJail - chips.reduce((blacks, chip)=>(
+    blacks + (chip > 0 ? chip : 0)
+  ), 0);
+
+  const whiteHome = 15 - whiteJail - chips.reduce((whites, chip)=>(
+    whites - (chip < 0 ? chip : 0)
+  ), 0);
+
+  //...
+```
+
+each player has 15 pieces, so we can count the number on the board and in jail to know how many are home
+
+
+we'll assign 15 points to the player for every piece home (+ for black, - for white)
+
+
+
+#### having pieces in jail is baaaaaaaaaaad
+
+we know from the input params how many for each player are in jail
+
+we take away 50 for each piece in jail (- for black, + for white)
+
+
+
+#### moving the pieces forward is good (more pips is bad)
+
+<sub>./src/util.js</sub>
+```js
+  //...
+
+  const blackPips = chips.reduce((pips, chip, i)=>(
+    pips + (chip > 0 ? chip * (24-i) + ((24 - i)**2)/24 : 0)
+  ), 0);
+
+  const whitePips = chips.reduce((pips, chip, i)=>(
+    pips - (chip < 0 ? chip * (i+1) - ((i+1)**2)/24 : 0)
+  ), 0);
+
+//...
+```
+
+here we're adding up all the spaces left to move, and adding more for further away pieces
+
+(distance left squared / 24 will double the score for a piece all the way at the start, and not punish pieces in the home 6)
+
+
+pips are bad! we want to have as little distance left as possible (- for black, + for white)
+
+
+
+
+#### having pieces alone (vulnerable to capture) is bad
+
+
+to compute home many pieces we have vulnerable to capture, we need to know first where the furthest back opponent piece is
+
+<sub>./src/util.js</sub>
+```js
+  //...
+  
+  const furthestBlack = chips.reduce((furthest, chip, i)=> (
+    (chip > 0) && (i < furthest) ? i : furthest), blackJail ? 0 : 24
+  );
+
+  const furthestWhite = chips.reduce((furthest, chip, i)=> (
+    (chip < 0) && (i > furthest) ? i : furthest), whiteJail ? 24 : 0
+  );
+
+```
+
+then we can count the number of singletons we have in front of an opponent
+
+
+```js
+
+  const blackVun = chips.filter((chip, i)=> (chip === 1) && (i < furthestWhite)).length;
+  const whiteVun = chips.filter((chip, i)=> (chip === -1) && (i > furthestBlack)).length;
+
+  //...
+```
+
+if we were really sophisiticated, we could count them differently based on how likely the opponent is to roll a capture
+
+eg if the opponent is in jail, we might not have to care about captures on the next turn
+
+
+vun (vulnerable) is bad, (- for black, + for white)
+
+
+
+#### having more blocks (to make blockades) is good
+
+<sub>./src/util.js</sub>
+```js
+  //...
+
+  const blackBlocks = chips.filter((chip, i)=> (chip > 1) && (i < furthestWhite)).length;
+  const whiteBlocks = chips.filter((chip, i)=> (chip < -1) && (i > furthestBlack)).length;
+
+  //...
+```
+
+also we only care about blocks in front of an opponent
+
+this score is good (+ for black, - for white), and will cause our computer player to cluster pieces together (good defense!)
+
+
+
+
+#### having pieces in the opponent's home 6 is bad
+
+we're already punishing pieces for being far away in our pips calculation, however, it might still be worthwhile to punish pieces being on the farthest away space even more
+
+<sub>./src/util.js</sub>
+```js
+  //...
+
+  const blackShneid = Math.max(0, chips[0]);
+  const whiteShneid = -Math.min(0, chips[23]);
+
+  //...
+```
+
+pieces on the shneid (having gone nowhere), are bad (- for black, + for white)
+
+
+#### returning a score
+
+```js
+  //...
+
+  return (
+    + blackHome * 15
+    - whiteHome * 15
+    
+    - blackPips
+    + whitePips
+    
+    - blackJail * 50
+    + whiteJail * 50
+    
+    - blackVun * 10
+    + whiteVun * 10
+    
+    + blackBlocks * 5
+    - whiteBlocks * 5
+    
+    - blackShneid * 10
+    + whiteShneid * 10
+  );
+};
+
+//...
+```
+
+now we can inspect some scores and see that they make a bit of sense!
+
+
+and of course we can select the best move for the computer player
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  cpMove = ()=>{
+    const options = calculateBoardOutcomes(this.state);
+
+    const scoredOptions = options.map(option=> ({ score: cpScore(option.board), moves: option.moves }));
+
+    const bestMoves = scoredOptions.sort((a, b)=> (a.score - b.score) * (this.state.cp === 'white' ? 1 : -1 ) )[0].moves;
+
+    console.log(bestMoves);
+  }
+
+//...
+```
 
 
 ### playing the moves on the board
 
+now that we've selected the best move - as far as our scoring function can compute - we should trigger the `makeMove` function
+
+to make the User eXperience better, we should loop through the moves at a delay, so the computer plays at a familiar pace
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+   for(let i=0; i<(bestMoves.length); i++){
+      setTimeout(()=> {
+        //... make a move
+        
+      }, 800 + 900*i);
+    }
+
+//...
+```
+
+
+then of course, we have three different ways to move a piece
+
+- a move from jail
+- a move to home
+- some other normal move
+
+
+we can trigger all of those with `makeMove`
+
+
+```js
+
+    // setTimeout in a loop to trigger the moves.
+
+    for(let i=0; i<(bestMoves.length); i++){
+      setTimeout(()=> {
+        this.makeMove( bestMoves[i] );
+      }, 800 + 900*i);
+    }
+  }
+
+//...
+```
+
+
+so now we can play against our computer player, and tweak the scoring function to our taste!
+
+
+
+<details>
+<summary>I'll provide my latest computer player scoring function here, as the player so far isn't so great!</summary>
+```js
+export const scoreBoard = (board)=>{
+  const { chips, blackJail, whiteJail } = board;
+
+  const blackHome = 15 - blackJail - chips.reduce((blacks, chip)=>(
+    blacks + (chip > 0 ? chip : 0)
+  ), 0);
+
+  const whiteHome = 15 - whiteJail - chips.reduce((whites, chip)=>(
+    whites - (chip < 0 ? chip : 0)
+  ), 0);
+
+  const blackPips = chips.reduce((pips, chip, i)=>(
+    pips + (chip > 0 ? chip * (24-i) * (i < 6 ? 2 : i < 12 ? 1.5 : i < 18 ? 1.25 : 1) : 0)
+  ), 0);
+
+  const whitePips = chips.reduce((pips, chip, i)=>(
+    pips - (chip < 0 ? chip * (i+1) * (i > 17 ? 2 : i > 11 ? 1.5 : i > 5 ? 1.25 : 1) : 0)
+  ), 0);
+
+  const furthestBlack = chips.reduce((furthest, chip, i)=> (
+    (chip > 0) && (i < furthest) ? i : furthest), blackJail ? 0 : 24
+  );
+
+  const furthestWhite = chips.reduce((furthest, chip, i)=> (
+    (chip < 0) && (i > furthest) ? i : furthest), whiteJail ? 24 : 0
+  );
+  
+  const blackVun = chips.filter((chip, i)=> (chip === 1) && (i < furthestWhite)).length;
+  const whiteVun = chips.filter((chip, i)=> (chip === -1) && (i > furthestBlack)).length;
+
+  const blackBlocks = chips.filter((chip, i)=> (chip > 1) && (i < furthestWhite)).length;
+  const whiteBlocks = chips.filter((chip, i)=> (chip < -1) && (i > furthestBlack)).length;
+
+  const blackShneid = Math.max(0, chips[0]);
+  const whiteShneid = Math.min(0, chips[23]);
+  
+  return (
+    blackHome * 15 -
+    whiteHome * 15 -
+    blackPips +
+    whitePips -
+    blackJail * 38 +
+    whiteJail * 38 -
+    blackVun * 10 +
+    whiteVun * 10 +
+    blackBlocks * 4 -
+    whiteBlocks * 4 -
+    blackShneid * 17 -
+    whiteShneid * 17
+    
+  );
+};
+```
+
+I've changed the pips calculation to punish pieces further back, and tweaked the values of captures blocks and shneids
+
+</details>
+
+
+
+
+
+### refactoring to `<Game mode={this.state.mode} />` to select game mode
+
+now that we have two different game modes, the user may wish to choose between them
+
+knowing that we'll have a third game mode in the next section, we will consider now a full refactor lifting `state`
+
+our goal will be to maintain the `state` related to game above the Component taking care of the game
+ - to make this work we will need to trigger `onGameChange` events from the Game (also `onGameEnd` `onCapture`, ...)
+
+
+further, we will make a game mode which blocks the user and the computer player, and simulate updating the game from above
+
+
+
+<sub>./src/Game.js
+```js
+//...
+```
+
+<sub>./src/App.js
+```js
+//...
+```
 
 
 
