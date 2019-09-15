@@ -16,7 +16,7 @@ class App extends React.Component {
     blackHome: 0,
     blackJail: 0,
 
-    turn: 'black',
+    turn: null,
     dice: [],
     selectedChip: null,
     legalMoves: [],
@@ -29,6 +29,7 @@ class App extends React.Component {
     blackHome: 0,
     blackJail: 0,
 
+    turn: null,
     dice: [],
     selectedChip: null,
     legalMoves: [],
@@ -94,6 +95,13 @@ class App extends React.Component {
     if( this.state.dice.length ) return;
 
     this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( !this.state.turn ) {
+        if( this.state.dice[0] === this.state.dice[1] )
+          return setTimeout(this.roll, 2000);
+
+        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, this.updateLegalMoves);
+      }
+
       if( this.state.dice[0] === this.state.dice[1] )
         this.setState({
           dice: [...this.state.dice, ...this.state.dice],

@@ -1345,6 +1345,76 @@ import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util'
 ending the turn we'll need to deal with later
 
 
+#### styling selected chip
+
+ we'll want to display the selection on the board
+
+
+we'll do this using a trick in CSS
+
+by adding a class based on the currently selected space, we can select the correct space to change color
+
+<sub>./src/Board.js</sub>
+```js
+//...
+
+    {[0, 180].map(angle=> (
+      <g key={angle} className={'selected-chip-'+selectedChip}
+         style={{ transform: 'rotate('+angle+'deg)', transformOrigin:'47.33% 50%' }}>
+        {[...Array(12)].map((_, i)=>(
+          <polygon key={i}
+                   points={`${centers[i]-50},20 ${centers[i]+50},20 ${centers[i]},450`}
+                   className={(i%2 ? 'black' : 'white')+'-triangle'} />
+        ))}
+      </g>
+    ))}
+
+//...
+```
+
+this CSS selector will choose the correct `nth-child(...)` when the class is set to that space on the board
+
+<sub>./src/App.css</sub>
+```css
+//...
+
+g.selected-chip-0:first-of-type polygon:nth-child(1),
+g.selected-chip-2:first-of-type polygon:nth-child(3),
+g.selected-chip-4:first-of-type polygon:nth-child(5),
+g.selected-chip-6:first-of-type polygon:nth-child(7),
+g.selected-chip-8:first-of-type polygon:nth-child(9),
+g.selected-chip-10:first-of-type polygon:nth-child(11),
+
+g.selected-chip-12:nth-of-type(2) polygon:nth-child(1),
+g.selected-chip-14:nth-of-type(2) polygon:nth-child(3),
+g.selected-chip-16:nth-of-type(2) polygon:nth-child(5),
+g.selected-chip-18:nth-of-type(2) polygon:nth-child(7),
+g.selected-chip-20:nth-of-type(2) polygon:nth-child(9),
+g.selected-chip-22:nth-of-type(2) polygon:nth-child(11) {
+  fill: #880;
+}
+
+g.selected-chip-1:first-of-type polygon:nth-child(2),
+g.selected-chip-3:first-of-type polygon:nth-child(4),
+g.selected-chip-5:first-of-type polygon:nth-child(6),
+g.selected-chip-7:first-of-type polygon:nth-child(8),
+g.selected-chip-9:first-of-type polygon:nth-child(10),
+g.selected-chip-11:first-of-type polygon:nth-child(12),
+
+g.selected-chip-13:nth-of-type(2) polygon:nth-child(2),
+g.selected-chip-15:nth-of-type(2) polygon:nth-child(4),
+g.selected-chip-17:nth-of-type(2) polygon:nth-child(6),
+g.selected-chip-19:nth-of-type(2) polygon:nth-child(8),
+g.selected-chip-21:nth-of-type(2) polygon:nth-child(10),
+g.selected-chip-23:nth-of-type(2) polygon:nth-child(12) {
+  fill: #ff0;
+}
+```
+
+
+by selecting the class with the number of the currently selected chip AND the relevant chip, we can use 100% CSS to highlight the chip!
+
+
 
 #### testing board after move (jail, captures, normal moves, home)
 
@@ -1661,6 +1731,35 @@ once the player has gotten their pieces in the home stretch (the last 6 chips be
 //...
 ```
 
+### starting the game correctly
+
+the correct start of a game of sheshbesh is that both players roll 1 die and the larger roll goes first
+
+so, let's recreate that by setting `turn` initially to `null`, and having the roll button do the first roll for both players
+
+then set whose turn it is based on which die is larger
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  state = {
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    turn: null,
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  }
+
+//...
+```
+
 
 
 ### ending the game
@@ -1678,6 +1777,7 @@ now that everything works well, we should reset the game if one player wins!
     blackHome: 0,
     blackJail: 0,
 
+    turn: null,
     dice: [],
     selectedChip: null,
     legalMoves: [],
@@ -1717,6 +1817,8 @@ next up - the computer player!
 
 <a name="step2"></a>
 ## step 2: Build a computer player for 1-player local game
+
+
 
 
 <a name="step3"></a>
