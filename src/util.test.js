@@ -1,4 +1,4 @@
-import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util';
+import { initBoard, calculateLegalMoves, calculateBoardAfterMove, calculateBoardOutcomes } from './util';
 
 it('moves out of jail', ()=>{
   const moves = calculateLegalMoves({
@@ -241,4 +241,88 @@ it('moves pieces home', ()=>{
   expect( blackJail ).toEqual( 0 );
   expect( whiteHome ).toEqual( 0 );
   expect( blackHome ).toEqual( 1 );
+});
+
+
+
+
+it('calculates the options to capture and move home', ()=>{
+  const optionsChips = [
+    -5, 0, 0, -3, -3, -3,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    2, 2, 1, 5, -1, 5,
+  ];
+
+  const whiteOutcomes = calculateBoardOutcomes({
+    chips: optionsChips,
+    dice: [2],
+    turn: 'white',
+    whiteJail: 0,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( whiteOutcomes ).toHaveLength( 4 );
+  expect( whiteOutcomes.filter(o => o.board.blackJail) ).toHaveLength( 1 );
+  
+  const blackOutcomes = calculateBoardOutcomes({
+    chips: optionsChips,
+    dice: [6, 2],
+    turn: 'black',
+    whiteJail: 0,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( blackOutcomes ).toHaveLength( 8 );
+  expect( blackOutcomes.filter(o => o.board.whiteJail) ).toHaveLength( 2 );
+  expect( blackOutcomes.filter(o => o.board.blackHome) ).toHaveLength( 8 );
+});
+
+
+it('calculates the options to move out of jail', ()=>{
+  const jailChips = [
+    -5, 0, 0, -3, -2, -3,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    2, 2, 1, 5, -1, 5,
+  ];
+
+  const whiteOutcomes = calculateBoardOutcomes({
+    chips: jailChips,
+    dice: [2, 4],
+    turn: 'white',
+    whiteJail: 1,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( whiteOutcomes ).toHaveLength( 6 );
+  expect( whiteOutcomes.filter(o => o.board.blackJail) ).toHaveLength( 4 );
+});
+
+
+it('calculates the options are empty when blockaded', ()=>{
+  const blockadeChips = [
+    -5, 0, 0, -3, -2, -3,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    2, 2, 2, 5, 2, 2,
+  ];
+
+  const whiteOutcomes = calculateBoardOutcomes({
+    chips: blockadeChips,
+    dice: [1, 2, 3, 4, 5, 6],
+    turn: 'white',
+    whiteJail: 2,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( whiteOutcomes ).toHaveLength( 0 );
 });

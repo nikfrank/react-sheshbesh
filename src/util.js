@@ -131,3 +131,35 @@ export const calculateLegalMoves = ({ chips, dice, turn, whiteJail, blackJail })
     ];
   }
 };
+
+
+
+export const calculateBoardOutcomes = board=>{
+  let outcomes = [];
+
+  const moves = calculateLegalMoves(board);
+
+  let options = moves.map(move => ({
+    board: calculateBoardAfterMove(board, move),
+    moves: [move],
+  }));
+
+  while( options.length ){
+    options = options.flatMap(option=> {
+      const moves = calculateLegalMoves(option.board);
+
+      if( !moves.length ){
+        outcomes.push(option);
+        return [];
+      }
+
+      return moves.map(move => ({
+        board: calculateBoardAfterMove(option.board, move),
+        moves: [...option.moves, move],
+      }));
+    });
+  }
+
+  return outcomes;
+};
+

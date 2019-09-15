@@ -1819,6 +1819,218 @@ next up - the computer player!
 ## step 2: Build a computer player for 1-player local game
 
 
+let's first review how a computer player will work into our game
+
+```
+
+first, we'll keep track of which player is a computer player in the state
+
+we will allow the user to select which if either side the computer will play
+
+whenever the turn changes (or the first roll), we will check if the cp is playing
+
+if so, we will trigger a function (cpMove) which we will write
+
+otherwise, we need to disable click events during the cp turn
+
+the cpMove function will pick a move and play it
+
+```
+
+
+in order to pick a move, we will need to calculate all of the options the computer has to play the dice
+
+then we'll write a scoring function to decide which outcome is the best!
+
+
+
+### calculating board outcomes
+
+we'll find our `calculateLegalMoves` function quite handy here
+
+<sub>./src/util.js</sub>
+```js
+//...
+
+export const calculateBoardOutcomes = board=>{
+  let outcomes = [];
+
+  const moves = calculateLegalMoves(board);
+
+  let options = moves.map(move => ({
+    board: calculateBoardAfterMove(board, move),
+    moves: [move],
+  }));
+
+```
+
+first, we'll calculate the options (option = { board, moves } where moves is the array of moves to get that board)
+
+
+next, we'll loop over all the options
+
+```js
+  while( options.length ){
+
+```
+
+and calculate the moves that are available for that option
+
+```js
+    options = options.flatMap(option=> {
+      const moves = calculateLegalMoves(option.board);
+```
+
+
+if there are no moves, so that is the endpoint of an option - the end of that turn
+
+we should put it into the outcomes (array of values we'll return) and return a `[]` to our `flatMap`
+
+```js
+      if( !moves.length ){
+        outcomes.push(option);
+        return [];
+      }
+```
+
+if there are still valid moves from this option, we will return an array of the options that result from those moves
+
+which will go back into our `options` variable, and thus will terminate the `while` loop once all outcomes are 'end of turn'
+
+```js
+      return moves.map(move => ({
+        board: calculateBoardAfterMove(option.board, move),
+        moves: [...option.moves, move],
+      }));
+    });
+  }
+
+  return outcomes;
+};
+
+```
+
+now we can test a few cases and make sure this is doing what we want
+
+
+<sub>./src/util.test.js</sub>
+```js
+//...
+
+it('calculates the options to capture and move home', ()=>{
+  const optionsChips = [
+    -5, 0, 0, -3, -3, -3,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    2, 2, 1, 5, -1, 5,
+  ];
+
+  const whiteOutcomes = calculateBoardOutcomes({
+    chips: optionsChips,
+    dice: [2],
+    turn: 'white',
+    whiteJail: 0,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( whiteOutcomes ).toHaveLength( 4 );
+  expect( whiteOutcomes.filter(o => o.board.blackJail) ).toHaveLength( 1 );
+  
+  const blackOutcomes = calculateBoardOutcomes({
+    chips: optionsChips,
+    dice: [6, 2],
+    turn: 'black',
+    whiteJail: 0,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( blackOutcomes ).toHaveLength( 8 );
+  expect( blackOutcomes.filter(o => o.board.whiteJail) ).toHaveLength( 2 );
+  expect( blackOutcomes.filter(o => o.board.blackHome) ).toHaveLength( 8 );
+});
+
+```
+
+
+and we should add some cases for moving from jail
+
+<sub>./src/util.test.js</sub>
+```js
+//...
+
+it('calculates the options to move out of jail', ()=>{
+  const jailChips = [
+    -5, 0, 0, -3, -2, -3,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    2, 2, 1, 5, -1, 5,
+  ];
+
+  const whiteOutcomes = calculateBoardOutcomes({
+    chips: jailChips,
+    dice: [2, 4],
+    turn: 'white',
+    whiteJail: 1,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( whiteOutcomes ).toHaveLength( 6 );
+  expect( whiteOutcomes.filter(o => o.board.blackJail) ).toHaveLength( 4 );
+});
+```
+
+
+and we should test that a blockade is effective
+
+<sub>./src/util.test.js</sub>
+```js
+//...
+
+it('calculates the options are empty when blockaded', ()=>{
+  const blockadeChips = [
+    -5, 0, 0, -3, -2, -3,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    2, 2, 2, 5, 2, 2,
+  ];
+
+  const whiteOutcomes = calculateBoardOutcomes({
+    chips: blockadeChips,
+    dice: [1, 2, 3, 4, 5, 6],
+    turn: 'white',
+    whiteJail: 2,
+    blackJail: 0,
+    whiteHome: 0,
+    blackHome: 0,
+  });
+
+  expect( whiteOutcomes ).toHaveLength( 0 );
+});
+```
+
+of course, we'll never have 6 dice available, but the test will still pass, and it proves that none of the moves are possible
+
+
+
+### triggering the computer's move
+
+
+
+
+### scoring board outcomes to decide which is best
+
+
+
+
+### playing the moves on the board
+
+
 
 
 <a name="step3"></a>
