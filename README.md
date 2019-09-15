@@ -2438,7 +2438,8 @@ so now we can play against our computer player, and tweak the scoring function t
 
 <details>
 <summary>I'll provide my latest computer player scoring function here, as the player so far isn't so great!</summary>
-```js
+
+<code>
 export const scoreBoard = (board)=>{
   const { chips, blackJail, whiteJail } = board;
 
@@ -2491,7 +2492,7 @@ export const scoreBoard = (board)=>{
     
   );
 };
-```
+</code>
 
 I've changed the pips calculation to punish pieces further back, and tweaked the values of captures blocks and shneids
 
