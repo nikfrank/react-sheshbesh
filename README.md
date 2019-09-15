@@ -2462,16 +2462,76 @@ our goal will be to maintain the `state` related to game above the Component tak
 further, we will make a game mode which blocks the user and the computer player, and simulate updating the game from above
 
 
+`$ mv src/App.js src/Game.js`
+
+
 
 <sub>./src/Game.js
 ```js
 //...
+class Game extends React.Component {
+
+//...
+
+  render() {
+    return (
+      <div className='game-container'>
+        <Board chips={this.state.chips}
+               onClick={this.spaceClicked}
+               onDoubleClick={this.spaceDoubleClicked}
+               selectedChip={this.state.selectedChip}
+               whiteJail={this.state.whiteJail} whiteHome={this.state.whiteHome}
+               blackJail={this.state.blackJail} blackHome={this.state.blackHome} />
+
+        <div className='dice-container'>
+          {!this.state.dice.length ? (
+            <button onClick={this.roll}>roll</button>
+          ) : (
+            <Dice dice={this.state.dice} />
+          )}
+        </div>
+      </div>
+    );
+  }
+}
+
+export default Game;
+
 ```
 
 <sub>./src/App.js
 ```js
-//...
+import React from 'react';
+import './App.css';
+
+import Game from './Game';
+
+import { initBoard } from './util';
+
+
+class App extends React.Component {
+  
+  render() {
+    return (
+      <div className="App">
+        <Game />
+      </div>
+    );
+  }
+}
+
+export default App;
 ```
+
+
+now that we have the files set up, we can start converting our state variables from `Game` into `App`'s `state` and pass them back to `Game` as `props`
+
+
+
+//...
+
+
+
 
 
 
