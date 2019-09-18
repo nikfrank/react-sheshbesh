@@ -31,6 +31,9 @@ button.menu-toggler {
   left: 0;
 }
 
+.sidenav ul.games-list li.selected {
+  color: darkred;
+}
 
 .Board {
   max-height: 100vh;

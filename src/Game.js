@@ -7,18 +7,7 @@ import { initBoard, calculateLegalMoves, calculateBoardAfterMove } from './util'
 
 class Game extends React.Component {
 
-  state = {
-    chips: [...initBoard],
-    whiteHome: 0,
-    whiteJail: 0,
-    blackHome: 0,
-    blackJail: 0,
-
-    turn: 'black',
-    dice: [],
-    selectedChip: null,
-    legalMoves: [],
-  }
+  state = { ...this.props.board }
 
   resetGame = ()=> this.setState({
     chips: [...initBoard],
@@ -32,9 +21,45 @@ class Game extends React.Component {
     legalMoves: [],
   })
 
+  componentDidUpdate(prevProps, prevState){
+    if((
+      (prevState.chips.join() !== this.state.chips.join()) ||
+      (prevState.whiteHome !== this.state.whiteHome) ||
+      (prevState.whiteJail !== this.state.whiteJail) ||
+      (prevState.blackHome !== this.state.blackHome) ||
+      (prevState.blackJail !== this.state.blackJail) ||
+      (prevState.dice.join() !== this.state.dice.join())
+    ) && (
+      prevState.dice.length ||
+      (this.state.dice[0] !== this.state.dice[1])
+    ))
+      this.props.onChange(this.state);
+
+    else if( prevState.turn !== this.state.turn )
+      this.props.onChange(this.state);
+
+    if(
+      (prevProps.board.chips.join() !== this.props.board.chips.join()) ||
+      (prevProps.board.whiteHome !== this.props.board.whiteHome) ||
+      (prevProps.board.whiteJail !== this.props.board.whiteJail) ||
+      (prevProps.board.blackHome !== this.props.board.blackHome) ||
+      (prevProps.board.blackJail !== this.props.board.blackJail) ||
+      (prevProps.board.dice.join() !== this.props.board.dice.join())
+    )
+      this.setState({
+        ...this.props.board,
+        legalMoves: this.state.legalMoves,
+        selectedChip: this.state.selectedChip,
+      });
+  }
+
   spaceClicked = (clicked)=>{
     // if no dice, do nothing (wait for roll)
     if( !this.state.dice.length ) return;
+    if(
+      (this.props.mode === '2p-remote') &&
+      (this.props.localPlayer !== this.state.turn)
+    ) return;
 
     const { legalMoves } = this.state;
 
@@ -70,6 +95,11 @@ class Game extends React.Component {
 
 
   spaceDoubleClicked = (clicked)=> {
+    if(
+      (this.props.mode === '2p-remote') &&
+      (this.props.localPlayer !== this.state.turn)
+    ) return;
+
     const legalHomeMove = this.state.legalMoves.find(move => (
       (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === clicked)
     ) );
@@ -90,6 +120,10 @@ class Game extends React.Component {
 
   roll = ()=> {
     if( this.state.dice.length ) return;
+    if(
+      (this.props.mode === '2p-remote') &&
+      (this.props.localPlayer !== this.state.turn)
+    ) return;
 
     this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
       if( this.state.dice[0] === this.state.dice[1] )
