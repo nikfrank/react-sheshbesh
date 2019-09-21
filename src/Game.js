@@ -94,12 +94,16 @@ class Game extends React.Component {
     if(
       (this.props.dice.length && !prevProps.dice.length && this.props.turn ) ||
       (!prevProps.turn && this.props.turn)
-    )
-      ( this.props.turn === this.props.cp ) ? (
-        this.props.cpMove()
-      ) : (
-        this.props.updateBoard({ legalMoves: calculateLegalMoves(this.props) })
-      );
+    ) {
+      if( this.props.turn === this.props.cp ) {
+        this.props.cpMove();
+      } else {
+        const nextMoves = calculateLegalMoves(this.props);
+        
+        if( nextMoves.length ) this.props.updateBoard({ legalMoves: nextMoves });
+        else this.props.onTurnChange();
+      }
+    }
   }  
   
   render() {

@@ -2783,9 +2783,12 @@ in `componentDidUpdate` we'll need to respond to the turn ot game starting by up
     if(
       (this.props.dice.length && !prevProps.dice.length && this.props.turn ) ||
       (!prevProps.turn && this.props.turn)
-    )
-      this.props.updateBoard({ legalMoves: calculateLegalMoves(this.props) });
-
+    ) {
+      const nextMoves = calculateLegalMoves(this.props);
+        
+      if( nextMoves.length ) this.props.updateBoard({ legalMoves: nextMoves });
+      else this.props.onTurnChange();
+    }
   }
 ```
 
@@ -2863,9 +2866,16 @@ when new dice arrive for the computer, we'll trigger the `cpMove`
     if(
       (this.props.dice.length && !prevProps.dice.length && this.props.turn ) ||
       (!prevProps.turn && this.props.turn)
-    )
-      if( this.props.turn === this.props.cp ) this.props.cpMove();
-      else this.props.updateBoard({ legalMoves: calculateLegalMoves(this.props) });
+    ) {
+      if( this.props.turn === this.props.cp ) {
+        this.props.cpMove();
+      } else {
+        const nextMoves = calculateLegalMoves(this.props);
+        
+        if( nextMoves.length ) this.props.updateBoard({ legalMoves: nextMoves });
+        else this.props.onTurnChange();
+      }
+    }
   }
 
 ```
