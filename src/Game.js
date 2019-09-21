@@ -3,49 +3,27 @@ import React from 'react';
 import Board from './Board';
 import Dice from './Dice';
 
-import { initBoard, calculateLegalMoves, calculateBoardAfterMove, calculateBoardOutcomes, cpScore } from './util';
+import { calculateLegalMoves, calculateBoardAfterMove } from './util';
 
 
 class Game extends React.Component {
 
   state = {
-    chips: [...initBoard],
-    whiteHome: 0,
-    whiteJail: 0,
-    blackHome: 0,
-    blackJail: 0,
-
-    turn: null,
-    dice: [],
     selectedChip: null,
-    legalMoves: [],
-
-    cp: 'white',
   }
 
-  resetGame = ()=> this.setState({
-    chips: [...initBoard],
-    whiteHome: 0,
-    whiteJail: 0,
-    blackHome: 0,
-    blackJail: 0,
-
-    turn: null,
-    dice: [],
-    selectedChip: null,
-    legalMoves: [],
-  })
-
+  resetGame = ()=> this.setState({ selectedChip: null }, this.props.resetGame)
+  
   spaceClicked = (clicked)=>{
     // if no dice, do nothing (wait for roll)
-    if( !this.state.dice.length ) return;
+    if( !this.props.dice.length ) return;
 
-    const { legalMoves } = this.state;
+    const { legalMoves } = this.props;
 
     // if turn is in jail
-    if( this.state[ this.state.turn + 'Jail' ] ){
+    if( this.props[ this.props.turn + 'Jail' ] ){
       const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
-        (moveFrom === this.state.turn + 'Jail') &&
+        (moveFrom === this.props.turn + 'Jail') &&
         (moveTo === clicked)
       ));
       
@@ -74,111 +52,71 @@ class Game extends React.Component {
   
 
   spaceDoubleClicked = (clicked)=> {
-    const legalHomeMove = this.state.legalMoves.find(move => (
-      (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === clicked)
+    const legalHomeMove = this.props.legalMoves.find(move => (
+      (move.moveTo === this.props.turn + 'Home') && (move.moveFrom === clicked)
     ) );
     
-    if( legalHomeMove )
-      this.setState({
-        ...calculateBoardAfterMove(this.state, legalHomeMove),
-        selectedChip: null,
-      }, this.updateLegalMoves);
-  }
-
-  makeMove = (move)=> {
-    this.setState({
-      ...calculateBoardAfterMove(this.state, move),
-      selectedChip: null
-    }, this.updateLegalMoves);
+    if( legalHomeMove ) this.makeMove( legalHomeMove );
   }
 
   roll = ()=> {
-    if( this.state.dice.length ) return;
-
-    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
-      if( !this.state.turn ) {
-        if( this.state.dice[0] === this.state.dice[1] )
-          return setTimeout(()=> this.setState({ dice: [] }, this.roll), 2000);
-
-        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, ()=>{
-          this.state.turn === this.state.cp ? this.cpMove() : this.updateLegalMoves()
-        });
-      }
-
-      if( this.state.dice[0] === this.state.dice[1] )
-        this.setState({
-          dice: [...this.state.dice, ...this.state.dice],
-        }, this.updateLegalMoves);
-      
-      else this.updateLegalMoves();
-    })
+    if( this.props.dice.length ) return;
+    this.props.roll();
   }
 
+  makeMove = (move)=> this.setState({ selectedChip: null }, ()=>{
+    const nextBoard = calculateBoardAfterMove(this.props, move);
+    const nextLegalMoves = calculateLegalMoves(nextBoard);
+    
+    this.props.updateBoard({ ...nextBoard, legalMoves: nextLegalMoves });
 
-  updateLegalMoves = ()=> this.setState({
-    legalMoves: calculateLegalMoves(this.state),
-  }, this.checkTurnOver)
+    if( !nextLegalMoves.length ) this.props.onTurnChange();
+  })
 
-  checkTurnOver = ()=>{
-    if( this.state.whiteHome === 15 ){
+  componentDidUpdate(prevProps){
+    if( this.props.whiteHome === 15 ){
       console.log('white wins');
-      return this.resetGame();
+      return this.props.resetGame();
     }
     
-    if( this.state.blackHome === 15 ){
+    if( this.props.blackHome === 15 ){
       console.log('black wins');
-      return this.resetGame();
+      return this.props.resetGame();
     }
 
-    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
-      turn: ({ black: 'white', white: 'black' })[this.state.turn],
-      dice: [],
-    }, this.triggerCP), 1000* this.state.dice.length);
-  }
+    if(
+      (prevProps.turn !== this.props.cp) &&
+      (this.props.turn === this.props.cp) &&
+      !this.props.dice.length
+    )
+      this.props.roll();
 
-  triggerCP = ()=> (this.state.turn === this.state.cp ? this.cpRoll() : null)
-
-  cpRoll = ()=>{
-    if( this.state.dice.length ) return;
-
-    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
-      if( this.state.dice[0] === this.state.dice[1] )
-        this.setState({
-          dice: [...this.state.dice, ...this.state.dice],
-        }, this.cpMove);
-      
-      else this.cpMove();
-    });
-  }
-  
-  cpMove = ()=>{
-    const options = calculateBoardOutcomes(this.state);
-
-    if( !options.length ) return this.checkTurnOver();
-
-    const scoredOptions = options.map(option=> ({ score: cpScore(option.board), moves: option.moves }));
-
-    const bestMoves = scoredOptions.sort((a, b)=> (a.score - b.score) * (this.state.cp === 'white' ? 1 : -1 ) )[0].moves;
-
-    for(let i=0; i<(bestMoves.length); i++)
-      setTimeout(()=> this.makeMove( bestMoves[i] ), 800 + 900*i);
-  }
+    if(
+      (this.props.dice.length && !prevProps.dice.length && this.props.turn ) ||
+      (!prevProps.turn && this.props.turn)
+    )
+      ( this.props.turn === this.props.cp ) ? (
+        this.props.cpMove()
+      ) : (
+        this.props.updateBoard({ legalMoves: calculateLegalMoves(this.props) })
+      );
+  }  
   
   render() {
     return (
       <div className='game-container'>
-        <Board chips={this.state.chips}
+        <Board chips={this.props.chips}
                onClick={this.spaceClicked}
                onDoubleClick={this.spaceDoubleClicked}
                selectedChip={this.state.selectedChip}
-               whiteJail={this.state.whiteJail} whiteHome={this.state.whiteHome}
-               blackJail={this.state.blackJail} blackHome={this.state.blackHome} />
+               whiteJail={this.props.whiteJail} whiteHome={this.props.whiteHome}
+               blackJail={this.props.blackJail} blackHome={this.props.blackHome} />
 
         <div className='dice-container'>
-          {!this.state.dice.length ? (
+          {!this.props.dice.length ? (
             <button onClick={this.roll}>roll</button>
           ) : (
-            <Dice dice={this.state.dice} />
+            <Dice dice={this.props.dice} />
           )}
         </div>
       </div>

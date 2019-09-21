@@ -2592,7 +2592,409 @@ now that we have the files set up, we can start converting our state variables f
 
 
 
-//...
+### the big refactor
+
+our goal in this refactor will be to separate the state logic from the event logic
+
+we will read through the Game component, and decide for each of our functions
+
+- `resetGame`
+- `spaceClicked`
+- `spaceDoubleClicked`
+- `makeMove`
+- `roll`
+- `updateLegalMoves`
+- `checkTurnOver`
+- `triggerCP`
+- `cpRoll`
+- `cpMove`
+
+
+which code needs to be raised with the state, and which needs to be lowered with user actions
+
+
+intuitively, `resetGame`, `makeMove`, `cpMakeMove`, `roll` and `cpRoll` need to be raised
+
+`spaceClicked`, `spaceDoubleClicked`, `updateLegalMoves`, `triggerCP` will probably stay
+
+
+`checkTurnOver` may end up split into both files into a prop function `onTurnOver`
+
+
+the state variable for `selectedChip` will stay on the Game
+
+the rest of the game state should be raised
+
+
+#### state in App
+
+<sub>./src/Game.js</sub>
+```js
+  state = {
+    selectedChip: null,
+  }
+```
+
+<sub>./src/App.js</sub>
+```js
+  state = {
+    board: {
+      chips: [...initBoard],
+      whiteHome: 0,
+      whiteJail: 0,
+      blackHome: 0,
+      blackJail: 0,
+
+      turn: null,
+      dice: [],
+      legalMoves: [],
+
+      cp: 'white',
+    },
+  }
+
+  //...
+  
+          <Game {...this.state.board} />
+```
+
+
+now the values which represent the state of our game are in the App component
+
+and the values are being passed back to the Game as props
+
+we'll need to move the functions which alter them up
+
+and refactor all usage inside Game from `this.state.whatever` to `this.props.whatever`
+
+
+#### resetGame
+
+here, we want to trigger the `resetGame` function from inside the Game, with state change in App
+
+<sub>./src/Game.js</sub>
+```js
+  resetGame = ()=> this.setState({ selectedChip: null }, this.props.resetGame)
+```
+
+<sub>./src/App.js</sub>
+```js
+
+  resetGame = ()=> this.setState({
+    board: {
+      chips: [...initBoard],
+      whiteHome: 0,
+      whiteJail: 0,
+      blackHome: 0,
+      blackJail: 0,
+
+      turn: null,
+      dice: [],
+      legalMoves: [],
+      
+      cp: 'white',
+    }
+  })
+
+  //...
+  
+        <Game resetGame={this.resetGame}
+              {...this.state.board} />
+
+
+```
+
+#### makeMove, turn change
+
+we can refactor `makeMove` into a simple calculation
+
+we will need to check for the game ending in a `componentDidUpdate` lifecycle
+
+<sub>./src/Game.js</sub>
+```js
+  makeMove = (move)=> this.setState({ selectedChip: null }, ()=>{
+    const nextBoard = calculateBoardAfterMove(this.props, move);
+    const nextLegalMoves = calculateLegalMoves(nextBoard);
+
+    this.props.updateBoard({ ...nextBoard, legalMoves: nextLegalMoves });
+
+    if( !nextLegalMoves.length ) this.props.onTurnChange();
+  })
+  
+  componentDidUpdate(prevProps){
+    if( this.props.whiteHome === 15 ){
+      console.log('white wins');
+      return this.props.resetGame();
+    }
+    
+    if( this.props.blackHome === 15 ){
+      console.log('black wins');
+      return this.props.resetGame();
+    }
+  }
+  
+  // remove updateLegalMoves, checkTurnOver
+```
+
+and have the `updateBoard` and `onTurnChange` do the rest of the work updating state
+
+<sub>./src/App.js</sub>
+```js
+
+  updateBoard = board=> this.setState({ board: { ...this.state.board, ...board } })
+
+  onTurnChange = ()=> setTimeout(()=> this.setState({
+    board: {
+      ...this.state.board,
+      dice: [],
+      turn: ({ white: 'black', black: 'white' })[this.state.board.turn].
+    },
+  }), 1000 * this.state.board.dice.length)
+
+
+  //...
+  
+        <Game resetGame={this.resetGame}
+              updateBoard={this.updateBoard}
+              onTurnChange={this.onTurnChange}
+              {...this.state.board} />
+
+```
+
+
+
+
+#### rolling
+
+now rolling is just calling the prop function... in our server version this will make an http call to get the dice
+
+in `componentDidUpdate` we'll need to respond to the turn ot game starting by updating the current legal moves
+
+<sub>./src/Game.js</sub>
+```js
+  roll = ()=> {
+    if( this.props.dice.length ) return;
+    this.props.roll();
+  }
+  
+  componentDidUpdate(prevProps){
+    //...
+    
+    if(
+      (this.props.dice.length && !prevProps.dice.length && this.props.turn ) ||
+      (!prevProps.turn && this.props.turn)
+    )
+      this.props.updateBoard({ legalMoves: calculateLegalMoves(this.props) });
+
+  }
+```
+
+for now, rolling will be done in App
+
+I've also refactored the logic out of nested `setState`s into more conventional (legible) logic
+
+of course, if you don't want "doubles while rolling at start of game" to render, you could change this to skip such an instance.
+
+when the dice are propagated to the Game component, they will trigger computer player logic and/or legalMoves calculation
+
+<sub>./src/App.js</sub>
+```js
+  roll = ()=>{
+    let nextDice = [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor);
+    let nextTurn = this.state.board.turn;
+    
+    if( nextDice[0] === nextDice[1] )
+      nextDice = [...nextDice, ...nextDice];
+    
+    if( !this.state.board.turn ){
+      if( nextDice[0] === nextDice[1] ){
+        this.setState({ board: { ...this.state.board, dice: nextDice.slice(0,2) } });
+        
+        return setTimeout(()=> this.setState({
+          board: { ...this.state.board, dice: [] },
+        }, this.roll), 2000);
+        
+      } else nextTurn = nextDice[0] > nextDice[1] ? 'black' : 'white';
+    }
+
+    this.setState({
+      board: {
+        ...this.state.board,
+        turn: nextTurn,
+        dice: nextDice,
+      }
+    });
+  }
+  
+  //...
+  
+        <Game resetGame={this.resetGame}
+              updateBoard={this.updateBoard}
+              onTurnChange={this.onTurnChange}
+              roll={this.roll}
+              {...this.state.board} />
+
+```
+
+
+
+
+#### computer player
+
+now when it has become the computer's turn, we'll trigger the roll
+
+which is now the same logic for both players
+
+when new dice arrive for the computer, we'll trigger the `cpMove`
+
+<sub>./src/Game.js</sub>
+```js
+  componentDidUpdate(prevProps){
+    //...
+    
+    if(
+      (prevProps.turn !== this.props.cp) &&
+      (this.props.turn === this.props.cp) &&
+      !this.props.dice.length
+    )
+      this.props.roll();
+
+    
+    if(
+      (this.props.dice.length && !prevProps.dice.length && this.props.turn ) ||
+      (!prevProps.turn && this.props.turn)
+    )
+      if( this.props.turn === this.props.cp ) this.props.cpMove();
+      else this.props.updateBoard({ legalMoves: calculateLegalMoves(this.props) });
+  }
+
+```
+
+
+the only real tricky part of this refactor for me was getting the computer turn to end correctly
+
+previously we had used the `setState` callback to end the turn
+
+now we have to add a callback to `updateBoard` for the computer player move to trigger turn change when moving the last piece
+
+<sub>./src/App.js</sub>
+```js
+  updateBoard = (board, cb)=> this.setState({ board: { ...this.state.board, ...board } }, cb)
+  
+  //...
+
+  cpMove = ()=>{
+    const options = calculateBoardOutcomes(this.state.board);
+
+    if( !options.length ) return this.onTurnChange();
+
+    const scoredOptions = options.map(option=> ({
+      score: cpScore(option.board), moves: option.moves,
+    }));
+
+    const bestMoves = scoredOptions.sort((a, b)=>
+      (a.score - b.score) * (this.state.board.cp === 'white' ? 1 : -1 )
+    )[0].moves;
+
+    for(let i=0; i<(bestMoves.length); i++)
+      setTimeout(()=> this.updateBoard(
+        calculateBoardAfterMove(this.state.board, bestMoves[i]),
+        i === bestMoves.length - 1 ?   this.onTurnChange : null
+      ), 800 + 900*i);
+  }
+
+  //...
+
+        <Game resetGame={this.resetGame}
+              updateBoard={this.updateBoard}
+              onTurnChange={this.onTurnChange}
+              roll={this.roll}
+              cpMove={this.cpMove}
+              {...this.state.board} />
+
+```
+
+
+
+#### click handlers
+
+of course, all of our `this.state.whatever` variables we had had in Game should now be `this.props.whatever`
+
+
+<sub>./src/Game.js</sub>
+```js
+  spaceClicked = (clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !this.props.dice.length ) return;
+
+    const { legalMoves } = this.props;
+
+    // if turn is in jail
+    if( this.props[ this.props.turn + 'Jail' ] ){
+      const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
+        (moveFrom === this.props.turn + 'Jail') &&
+        (moveTo === clicked)
+      ));
+      
+      if( clickMove ) this.makeMove(clickMove);
+      
+    } else {
+      // if no chip selected
+      if( this.state.selectedChip === null ){
+        if( legalMoves.filter(({ moveFrom }) => moveFrom === clicked ).length )
+          this.setState({ selectedChip: clicked });
+        
+      } else {
+        const clickMove = legalMoves.find(({ moveFrom, moveTo }) => (
+          (moveFrom === this.state.selectedChip) &&
+          (moveTo === clicked)
+        ));
+        
+        if( clickMove ) this.makeMove(clickMove);
+
+        // if another click on the selectedChip, unselect the chip
+        if( clicked === this.state.selectedChip )
+          this.setState({ selectedChip: null });
+      }
+    }
+  }
+  
+
+  spaceDoubleClicked = (clicked)=> {
+    const legalHomeMove = this.props.legalMoves.find(move => (
+      (move.moveTo === this.props.turn + 'Home') && (move.moveFrom === clicked)
+    ) );
+    
+    if( legalHomeMove ) this.makeMove( legalHomeMove );
+  }
+```
+
+
+#### Game render
+
+<sub>./src/Game.js</sub>
+```js
+  render() {
+    return (
+      <div className='game-container'>
+        <Board chips={this.props.chips}
+               onClick={this.spaceClicked}
+               onDoubleClick={this.spaceDoubleClicked}
+               selectedChip={this.state.selectedChip}
+               whiteJail={this.props.whiteJail} whiteHome={this.props.whiteHome}
+               blackJail={this.props.blackJail} blackHome={this.props.blackHome} />
+
+        <div className='dice-container'>
+          {!this.props.dice.length ? (
+            <button onClick={this.roll}>roll</button>
+          ) : (
+            <Dice dice={this.props.dice} />
+          )}
+        </div>
+      </div>
+    );
+  }
+```
 
 
 
