@@ -1718,6 +1718,70 @@ next up - the computer player!
 <a name="step2"></a>
 ## step 2: Build a computer player for 1-player local game
 
+so how are we going to trigger a computer player playing?
+
+I suppose when the user is done their move (which we'll know in the `checkTurnOver` function), we could trigger computer actions
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  checkTurnOver = ()=>{
+    if( (this.state.whiteHome === 15 ) || ( this.state.blackHome === 15 )){
+      //... handle endgame
+      
+      return;
+    }
+
+    const legalMoves = calculateLegalMoves(
+      this.state.chips, this.state.dice, this.state.turn,
+      this.state.whiteJail, this.state.blackJail
+    );
+
+    if( !legalMoves.length ) setTimeout(()=>
+      this.setState({
+        turn: ({ black: 'white', white: 'black' })[this.state.turn],
+        dice: [],
+      }, ()=> {
+        if( this.state.turn === this.state.cp ) this.cpRoll();
+      }), this.state.dice.length * 1000);
+
+    return legalMoves.length;
+  }
+
+//...
+```
+
+here we see that if the turn is over, and the next turn is the computer's turn, we call the `cpRoll` function
+
+```js
+//...
+
+  cpRoll = ()=> {
+    this.setState({
+      dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor)
+    }, ()=>{
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.cpMove);
+      else this.cpMove();
+    });
+  }
+
+//...
+```
+
+just like in the `roll` funciton for the player, we make up two random dice numbers, duplicate them if they're the same
+
+but here, we trigger the `cpMove` function, which is where "building the computer player AI" begins....
+
+
+we'll need to compute the possible outcomes for all the possible moves the computer will make (though we already have a handy utility function for this...)
+
+then we'll choose the best one!
+
+
 
 <a name="step3"></a>
 ## step 3: Build a game server with google oauth verification
