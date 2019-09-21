@@ -2998,7 +2998,9 @@ of course, all of our `this.state.whatever` variables we had had in Game should 
 
 
 
+at this point the game should work just as it did before
 
+but now, we're ready to override some actions for multiplayer (roll, remote player move)
 
 
 <a name="step3"></a>
