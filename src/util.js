@@ -131,3 +131,88 @@ export const calculateLegalMoves = ({ chips, dice, turn, whiteJail, blackJail })
     ];
   }
 };
+
+
+
+export const calculateBoardOutcomes = board=>{
+  let outcomes = [];
+
+  const moves = calculateLegalMoves(board);
+
+  let options = moves.map(move => ({
+    board: calculateBoardAfterMove(board, move),
+    moves: [move],
+  }));
+
+  while( options.length ){
+    options = options.flatMap(option=> {
+      const moves = calculateLegalMoves(option.board);
+
+      if( !moves.length ){
+        outcomes.push(option);
+        return [];
+      }
+
+      return moves.map(move => ({
+        board: calculateBoardAfterMove(option.board, move),
+        moves: [...option.moves, move],
+      }));
+    });
+  }
+
+  return outcomes;
+};
+
+
+export const cpScore = (board)=>{
+  const { chips, blackJail, whiteJail } = board;
+
+  const blackHome = 15 - blackJail - chips.reduce((blacks, chip)=>(
+    blacks + (chip > 0 ? chip : 0)
+  ), 0);
+
+  const whiteHome = 15 - whiteJail - chips.reduce((whites, chip)=>(
+    whites - (chip < 0 ? chip : 0)
+  ), 0);
+
+  const blackPips = chips.reduce((pips, chip, i)=>(
+    pips + (chip > 0 ? chip * (24-i) * (i < 6 ? 2 : i < 12 ? 1.5 : i < 18 ? 1.25 : 1) : 0)
+  ), 0);
+
+  const whitePips = chips.reduce((pips, chip, i)=>(
+    pips - (chip < 0 ? chip * (i+1) * (i > 17 ? 2 : i > 11 ? 1.5 : i > 5 ? 1.25 : 1) : 0)
+  ), 0);
+
+  const furthestBlack = chips.reduce((furthest, chip, i)=> (
+    (chip > 0) && (i < furthest) ? i : furthest), blackJail ? 0 : 24
+  );
+
+  const furthestWhite = chips.reduce((furthest, chip, i)=> (
+    (chip < 0) && (i > furthest) ? i : furthest), whiteJail ? 24 : 0
+  );
+  
+  const blackVun = chips.filter((chip, i)=> (chip === 1) && (i < furthestWhite)).length;
+  const whiteVun = chips.filter((chip, i)=> (chip === -1) && (i > furthestBlack)).length;
+
+  const blackBlocks = chips.filter((chip, i)=> (chip > 1) && (i < furthestWhite)).length;
+  const whiteBlocks = chips.filter((chip, i)=> (chip < -1) && (i > furthestBlack)).length;
+
+  const blackShneid = Math.max(0, chips[0]);
+  const whiteShneid = Math.min(0, chips[23]);
+  
+  return (
+    blackHome * 15 -
+    whiteHome * 15 -
+    blackPips +
+    whitePips -
+    blackJail * 38 +
+    whiteJail * 38 -
+    blackVun * 10 +
+    whiteVun * 10 +
+    blackBlocks * 4 -
+    whiteBlocks * 4 -
+    blackShneid * 17 -
+    whiteShneid * 17
+    
+  );
+};
