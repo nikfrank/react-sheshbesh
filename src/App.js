@@ -5,6 +5,9 @@ import Game from './Game';
 
 import { initBoard, calculateBoardAfterMove, calculateBoardOutcomes, cpScore } from './util';
 
+
+import { GoogleLogin } from 'react-google-login';
+
 class App extends React.Component {
 
   state = {
@@ -101,6 +104,18 @@ class App extends React.Component {
   render() {
     return (
       <div className="App">
+
+        <GoogleLogin
+            clientId="sheshbesh-1569175678502.apps.googleusercontent.com"
+            render={renderProps => (
+                <button onClick={renderProps.onClick} disabled={renderProps.disabled}>This is my custom Google button</button>
+              )}
+            buttonText="Login"
+            onSuccess={(...a)=> console.log(a)}
+            onFailure={(...a)=> console.log(a)}
+            cookiePolicy={'single_host_origin'}
+        />
+        
         <Game resetGame={this.resetGame}
               updateBoard={this.updateBoard}
               onTurnChange={this.onTurnChange}
@@ -113,3 +128,6 @@ class App extends React.Component {
 }
 
 export default App;
+
+
+//sheshbesh-1569175678502

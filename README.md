@@ -3016,6 +3016,51 @@ but now, we're ready to override some actions for multiplayer (roll, remote play
 <a name="step3"></a>
 ## step 3: Build a game server with google oauth verification
 
+now that our Components are refactored for external control, we can start making our server
+
+
+we'll follow the following steps to do so
+
+- write a facade network layer for the front end
+  - create game
+  - list available games
+  - join game
+  - leave game
+  - asking the server to roll for us
+  - telling the server what our move is
+  - asking the server for the updated game (other player's move)
+- package our sheshbesh game logic (and tests) into an npm-module
+- test and build the server
+  - create database
+  - table access object
+  - route handlers
+  - login with google + auth middleware
+- integrate our front end and back end
+
+
+#### facade network layer
+
+`$ touch src/network.js`
+
+in this file, we'll write our network handlers - functions which call API endpoints and resolve data
+
+
+
+
+
+#### starting up an express server
+
+
+
+
+#### creating a google app for login
+
+https://developers.google.com/identity/sign-in/web/sign-in
+
+https://console.developers.google.com/apis/dashboard
+
+`$ yarn add react-google-login`
+
 
 <a name="step4"></a>
 ## step 4: Deploy the solution to Heroku
