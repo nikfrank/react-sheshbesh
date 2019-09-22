@@ -106,7 +106,7 @@ class App extends React.Component {
       <div className="App">
 
         <GoogleLogin
-            clientId="sheshbesh-1569175678502.apps.googleusercontent.com"
+            clientId="775163844462-uak556d7u698pboi8ja5uqf8f859agm1.apps.googleusercontent.com"
             render={renderProps => (
                 <button onClick={renderProps.onClick} disabled={renderProps.disabled}>This is my custom Google button</button>
               )}
