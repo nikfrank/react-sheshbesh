@@ -2856,6 +2856,7 @@ when new dice arrive for the computer, we'll trigger the `cpMove`
     //...
     
     if(
+      prevProps.turn &&
       (prevProps.turn !== this.props.cp) &&
       (this.props.turn === this.props.cp) &&
       !this.props.dice.length
@@ -3045,6 +3046,46 @@ we'll follow the following steps to do so
 in this file, we'll write our network handlers - functions which call API endpoints and resolve data
 
 
+first let's make some fake data
+
+<sub>./src/network.js</sub>
+```js
+const fakeGames = [
+  {
+    players: [ '106483364296779313079', '103467006218876645081' ],
+    board: {
+      chips: [2,0,0,0,0,-5,0,-3,0,0,0,5,-5,0,0,0,3,0,5,0,0,0,0,-2],
+      whiteHome: 0,
+      whiteJail: 0,
+      blackHome: 0,
+      blackJail: 0,
+      turn: null,
+      dice: [],
+    },
+  },
+  {
+    players: [ '106483364296779313078', '103467006218876645022' ],
+    board: {
+      chips: [1,0,-2,0,0,-4,0,-2,0,0,0,6,-5,0,0,0,3,0,5,0,0,0,0,-2],
+      whiteHome: 0,
+      whiteJail: 0,
+      blackHome: 0,
+      blackJail: 0,
+      turn: 'white',
+      dice: [2, 2, 2, 2],
+    },
+  },
+];
+```
+
+which we can now send back as a response to list the games
+
+<sub>./src/network.js</sub>
+```js
+//...
+
+export const listGames = ()=> Promise.resolve(fakeGames);
+```
 
 
 
@@ -3058,6 +3099,10 @@ in this file, we'll write our network handlers - functions which call API endpoi
 https://developers.google.com/identity/sign-in/web/sign-in
 
 https://console.developers.google.com/apis/dashboard
+
+https://theonetechnologies.com/blog/post/how-to-get-google-app-client-id-and-client-secret
+
+https://stackoverflow.com/questions/43964539/google-api-not-a-valid-origin-for-the-client-url-has-not-been-whitelisted-for/45761277#45761277
 
 `$ yarn add react-google-login`
 

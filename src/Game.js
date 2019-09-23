@@ -85,6 +85,7 @@ class Game extends React.Component {
     }
 
     if(
+      prevProps.turn &&
       (prevProps.turn !== this.props.cp) &&
       (this.props.turn === this.props.cp) &&
       !this.props.dice.length

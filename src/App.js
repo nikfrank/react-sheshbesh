@@ -5,8 +5,8 @@ import Game from './Game';
 
 import { initBoard, calculateBoardAfterMove, calculateBoardOutcomes, cpScore } from './util';
 
-
 import { GoogleLogin } from 'react-google-login';
+
 
 class App extends React.Component {
 
@@ -62,7 +62,7 @@ class App extends React.Component {
     if( !this.state.board.turn ){
       if( nextDice[0] === nextDice[1] ){
         this.setState({ board: { ...this.state.board, dice: nextDice.slice(0,2) } });
-        
+
         return setTimeout(()=> this.setState({
           board: { ...this.state.board, dice: [] },
         }, this.roll), 2000);
