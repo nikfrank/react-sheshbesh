@@ -106,6 +106,12 @@ class Game extends React.Component {
       }
     }
   }  
+
+  down = ()=>{
+    this.t = setTimeout(()=> this.props.longPressRoll(), 2000);
+  }
+
+  up = ()=> clearTimeout(this.t)
   
   render() {
     return (
@@ -119,7 +125,11 @@ class Game extends React.Component {
 
         <div className='dice-container'>
           {!this.props.dice.length ? (
-            <button onClick={this.roll}>roll</button>
+             <button onClick={this.roll}
+                     onTouchEnd={this.up}
+                     onTouchStart={this.down}
+                     onMouseUp={this.up}
+                     onMouseDown={this.down}>roll</button>
           ) : (
             <Dice dice={this.props.dice} />
           )}

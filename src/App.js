@@ -5,12 +5,12 @@ import Game from './Game';
 
 import { initBoard, calculateBoardAfterMove, calculateBoardOutcomes, cpScore } from './util';
 
-import { GoogleLogin } from 'react-google-login';
-
 
 class App extends React.Component {
 
   state = {
+    menuOpen: false,
+    remoteGame: false,
     board: {
       chips: [...initBoard],
       whiteHome: 0,
@@ -42,15 +42,28 @@ class App extends React.Component {
     }
   })
 
-  updateBoard = (board, cb)=> this.setState({ board: { ...this.state.board, ...board } }, cb)
+  updateBoard = (board, cb)=> {
+    if(!this.state.remoteGame)
+      this.setState({ board: { ...this.state.board, ...board } }, cb);
 
-  onTurnChange = ()=> setTimeout(()=> this.setState({
-    board: {
-      ...this.state.board,
-      dice: [],
-      turn: ({ white: 'black', black: 'white' })[this.state.board.turn],
-    },
-  }), 1000 * this.state.board.dice.length - 1000)
+    else {
+      // sync new state to firebase
+    }
+  }
+
+  onTurnChange = ()=> {
+    if(!this.state.remoteGame) setTimeout(()=> this.setState({
+      board: {
+        ...this.state.board,
+        dice: [],
+        turn: ({ white: 'black', black: 'white' })[this.state.board.turn],
+      },
+    }), 1000 * this.state.board.dice.length - 500);
+
+    else {
+      // wait dice - 0.5s, update dice and turn on server
+    }
+  }
 
   roll = ()=>{
     let nextDice = [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor);
@@ -60,6 +73,11 @@ class App extends React.Component {
       nextDice = [...nextDice, ...nextDice];
     
     if( !this.state.board.turn ){
+      // if remoteGame, check if there are initRolls to use
+      // if there are, find one that works,
+      // if I won, I'll update the turn dice and initRolls (new 30 random)
+      // if I lost, I'll wait for snapshots
+      
       if( nextDice[0] === nextDice[1] ){
         this.setState({ board: { ...this.state.board, dice: nextDice.slice(0,2) } });
 
@@ -70,6 +88,7 @@ class App extends React.Component {
       } else nextTurn = nextDice[0] > nextDice[1] ? 'black' : 'white';
     }
 
+    // make sure not to do this on remoteGame cpTurn
     this.setState({
       board: {
         ...this.state.board,
@@ -80,6 +99,9 @@ class App extends React.Component {
   }
 
   cpMove = ()=>{
+    if( this.state.remoteGame ) return;
+    // wait for snapshots instead
+    
     const options = calculateBoardOutcomes(this.state.board);
 
     if( !options.length ) return this.onTurnChange();
@@ -100,28 +122,52 @@ class App extends React.Component {
 
   }
 
+  toggleMenu = ()=> this.setState({ menuOpen: !this.state.menuOpen })
+
+  playOnline = ()=> this.setState({ remoteGame: true }, ()=>{
+    this.toggleMenu();
+
+    // onSnapshot remote game state
+    // set "cp" to other user
+  })
+  
+  playCp = ()=> this.setState({ remoteGame: false }, ()=>{
+    this.toggleMenu();
+
+    // cleanup any firebase listeners
+  })
   
   render() {
     return (
       <div className="App">
 
-        <GoogleLogin
-            clientId="775163844462-uak556d7u698pboi8ja5uqf8f859agm1.apps.googleusercontent.com"
-            render={renderProps => (
-                <button onClick={renderProps.onClick} disabled={renderProps.disabled}>This is my custom Google button</button>
-              )}
-            buttonText="Login"
-            onSuccess={(...a)=> console.log(a)}
-            onFailure={(...a)=> console.log(a)}
-            cookiePolicy={'single_host_origin'}
-        />
-        
-        <Game resetGame={this.resetGame}
-              updateBoard={this.updateBoard}
-              onTurnChange={this.onTurnChange}
-              roll={this.roll}
-              cpMove={this.cpMove}
-              {...this.state.board} />
+        {this.state.remoteGame ? (
+           <Game resetGame={this.resetGame}
+                 updateBoard={this.updateBoard}
+                 onTurnChange={this.onTurnChange}
+                 roll={this.roll}
+                 longPressRoll={this.toggleMenu}
+                 cpMove={this.cpMove}
+                 {...this.state.board} />
+         ) : (
+           <Game resetGame={this.resetGame}
+                 updateBoard={this.updateBoard}
+                 onTurnChange={this.onTurnChange}
+                 roll={this.roll}
+                 longPressRoll={this.toggleMenu}
+                 cpMove={this.cpMove}
+                 {...this.state.board} /> )}
+
+           {this.state.menuOpen && (
+              <div className='menu'>
+                <label>
+                  name:
+                  <input value={this.state.nickname} onChange={this.setNickname}/>
+                </label>
+                <button onClick={this.playOnline}>play online</button>
+                <button onClick={this.playCp}>play cp</button>
+              </div>
+            )}
       </div>
     );
   }
